@@ -74,20 +74,78 @@ STARK/
 
 ## 🚀 Quick Start
 
-### 1. Install Dependencies
+### 1. Clone the Repository
 ```bash
-pip install -r requirements.txt
+git clone https://github.com/San20506/Stark.git
+cd Stark
 ```
 
-### 2. Verify Module 1
+### 2. Install Dependencies
+```bash
+pip install -r requirements.txt
+npm install  # For Node.js dependencies
+```
+
+### 3. Download Large Files (Required)
+
+Some large files are excluded from the repository due to GitHub's size limits. Download them manually:
+
+#### GloVe Word Embeddings (~2GB)
+```bash
+mkdir -p data/glove
+cd data/glove
+
+# Download GloVe embeddings
+wget https://nlp.stanford.edu/data/glove.6B.zip
+unzip glove.6B.zip
+
+cd ../..
+```
+
+#### Voice Model (GPT-SoVITS) (~100MB)
+```bash
+mkdir -p models/voice/gptsovits
+
+# Download the voice model (replace with your actual model source)
+# Option 1: From Hugging Face (example)
+# wget https://huggingface.co/YOUR_MODEL_PATH/sovits_model.pth -O models/voice/gptsovits/sovits_model.pth
+
+# Option 2: If you have a local backup, copy it to:
+# models/voice/gptsovits/sovits_model.pth
+```
+
+> **Note**: The voice model is optional if you don't need text-to-speech functionality.
+
+### 4. Verify Installation
 ```bash
 python -c "from core.config import get_config; print('✅ Config OK')"
 ```
 
-### 3. Run STARK (after full build)
+### 5. Run STARK
 ```bash
-python -m core.main
+# CLI Mode
+python stark_cli.py
+
+# Voice Mode
+python run_voice.py
+
+# Web Interface
+python web_server.py
 ```
+
+---
+
+## 📦 Files Excluded from Repository
+
+The following files are in `.gitignore` to keep the repo under GitHub's limits:
+
+| Path | Size | Purpose | Download |
+|------|------|---------|----------|
+| `node_modules/` | ~115MB | Node.js deps | `npm install` |
+| `data/glove/*.txt` | ~2GB | Word embeddings | See above |
+| `data/glove/*.zip` | ~800MB | Embeddings archive | See above |
+| `models/**/*.pth` | ~100MB+ | Model weights | See above |
+| `models/**/*.bin` | Varies | Binary models | Train or download |
 
 ---
 
