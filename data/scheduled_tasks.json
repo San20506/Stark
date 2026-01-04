@@ -1,0 +1,42 @@
+{
+  "test_daily": {
+    "task_id": "test_daily",
+    "action": "what's the weather?",
+    "trigger_type": "cron",
+    "trigger_config": {
+      "hour": 9,
+      "minute": 0,
+      "day_of_week": null
+    },
+    "enabled": true,
+    "created_at": "2025-12-18T17:26:41.370377",
+    "last_run": null,
+    "next_run": null
+  },
+  "test_reminder": {
+    "task_id": "test_reminder",
+    "action": "test reminder",
+    "trigger_type": "date",
+    "trigger_config": {
+      "run_date": "2025-12-18T17:26:46.372893"
+    },
+    "enabled": true,
+    "created_at": "2025-12-18T17:26:41.374901",
+    "last_run": "2025-12-18T17:26:46.388968",
+    "next_run": null
+  },
+  "test_interval": {
+    "task_id": "test_interval",
+    "action": "check status",
+    "trigger_type": "interval",
+    "trigger_config": {
+      "seconds": null,
+      "minutes": 1,
+      "hours": null
+    },
+    "enabled": true,
+    "created_at": "2025-12-18T17:26:41.385971",
+    "last_run": null,
+    "next_run": null
+  }
+}

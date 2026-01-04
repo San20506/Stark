@@ -1,0 +1,15 @@
+{
+  "open_browser": [
+    "Press Win+R",
+    "Type 'chrome'",
+    "Press Enter"
+  ],
+  "take_screenshot": {
+    "steps": [
+      "Import pyautogui",
+      "Call pyautogui.screenshot()",
+      "Save to file"
+    ],
+    "created": 1766196616.0006971
+  }
+}

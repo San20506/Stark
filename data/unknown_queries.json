@@ -1,0 +1,68 @@
+[
+  {
+    "query": "what's the weather in Tokyo",
+    "closest_intent": "weather",
+    "score": 0.5485358238220215,
+    "timestamp": "2025-12-19T17:27:38.476980"
+  },
+  {
+    "query": "remind me to call mom",
+    "closest_intent": "reminder",
+    "score": 0.6078411340713501,
+    "timestamp": "2025-12-19T17:27:38.518638"
+  },
+  {
+    "query": "open notepad",
+    "closest_intent": "open_app",
+    "score": 0.39888036251068115,
+    "timestamp": "2025-12-19T17:27:38.537473"
+  },
+  {
+    "query": "search for python tutorials",
+    "closest_intent": "search_web",
+    "score": 0.40341150760650635,
+    "timestamp": "2025-12-19T17:27:38.560301"
+  },
+  {
+    "query": "some random gibberish query that makes no sense",
+    "closest_intent": "search_web",
+    "score": 0.31534427404403687,
+    "timestamp": "2025-12-19T17:27:38.585836"
+  },
+  {
+    "query": "weather in tokyo",
+    "closest_intent": "weather",
+    "score": 0.5139931440353394,
+    "timestamp": "2025-12-19T17:29:23.436892"
+  },
+  {
+    "query": "random gibberish",
+    "closest_intent": "greeting",
+    "score": 0.2575095295906067,
+    "timestamp": "2025-12-19T17:29:23.469680"
+  },
+  {
+    "query": "weather in tokyo",
+    "closest_intent": "weather",
+    "score": 0.5882117748260498,
+    "timestamp": "2025-12-19T17:38:09.902815"
+  },
+  {
+    "query": "open notepad",
+    "closest_intent": "open_app",
+    "score": 0.5796284675598145,
+    "timestamp": "2025-12-19T17:38:09.937045"
+  },
+  {
+    "query": "search for python",
+    "closest_intent": "search_web",
+    "score": 0.5490599870681763,
+    "timestamp": "2025-12-19T17:38:09.955120"
+  },
+  {
+    "query": "Tell me about machine learning",
+    "closest_intent": "search_web",
+    "score": 0.39547300338745117,
+    "timestamp": "2025-12-20T07:43:48.211154"
+  }
+]

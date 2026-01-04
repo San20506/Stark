@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "@fission-ai/openspec": "^0.17.2",
+    "node": "^24.12.0",
+    "open": "^11.0.0",
+    "openspec": "^0.0.0",
+    "spec": "^1.0.1"
+  }
+}

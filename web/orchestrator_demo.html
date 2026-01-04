@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STARK - Adaptive Orchestrator Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1d3a 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 0;
+            border-bottom: 2px solid rgba(0, 183, 255, 0.3);
+        }
+
+        h1 {
+            font-size: 3em;
+            background: linear-gradient(45deg, #00b7ff, #0080ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            text-shadow: 0 0 30px rgba(0, 183, 255, 0.5);
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 1.1em;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel h2 {
+            color: #00b7ff;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .input-section {
+            grid-column: 1 / -1;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(0, 183, 255, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            color: #fff;
+            font-size: 1.1em;
+            font-family: inherit;
+            resize: vertical;
+            transition: all 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #00b7ff;
+            box-shadow: 0 0 20px rgba(0, 183, 255, 0.3);
+        }
+
+        button {
+            background: linear-gradient(45deg, #00b7ff, #0080ff);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 183, 255, 0.4);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 183, 255, 0.6);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin: 5px 5px 5px 0;
+        }
+
+        .badge-fast {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4caf50;
+            border: 1px solid #4caf50;
+        }
+
+        .badge-thinking {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ff9800;
+            border: 1px solid #ff9800;
+        }
+
+        .badge-router {
+            background: rgba(156, 39, 176, 0.2);
+            color: #9c27b0;
+            border: 1px solid #9c27b0;
+        }
+
+        .response-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 4px solid #00b7ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            min-height: 80px;
+        }
+
+        .response-box.empty {
+            color: #666;
+            font-style: italic;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .metric:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            color: #888;
+        }
+
+        .metric-value {
+            color: #00b7ff;
+            font-weight: 600;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 183, 255, 0.3);
+            border-top-color: #00b7ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .architecture {
+            font-family: monospace;
+            font-size: 0.9em;
+            line-height: 1.8;
+            color: #aaa;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .example-queries {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .example-query {
+            background: rgba(0, 183, 255, 0.1);
+            border: 1px solid rgba(0, 183, 255, 0.3);
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+        }
+
+        .example-query:hover {
+            background: rgba(0, 183, 255, 0.2);
+            transform: translateX(5px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚡ STARK</h1>
+            <p class="subtitle">Adaptive Orchestrator - Intelligent Multi-Model Routing</p>
+        </header>
+
+        <div class="main-content">
+            <div class="panel input-section">
+                <h2>🎯 Query Input</h2>
+                <textarea id="queryInput" placeholder="Enter your query here... (e.g., 'Hello', 'Debug my Python error', 'Make me a sandwich')"></textarea>
+                <button id="submitBtn" onclick="submitQuery()">Process Query</button>
+                
+                <div style="margin-top: 20px;">
+                    <strong>Example Queries:</strong>
+                    <div class="example-queries">
+                        <div class="example-query" onclick="setQuery('Hello STARK!')">👋 Hello STARK!</div>
+                        <div class="example-query" onclick="setQuery('Debug this IndexError')">🐛 Debug IndexError</div>
+                        <div class="example-query" onclick="setQuery('Explain Python decorators')">📚 Explain decorators</div>
+                        <div class="example-query" onclick="setQuery('Make me a sandwich')">🤔 Edge case test</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>🧠 Routing Decision</h2>
+                <div id="routingInfo">
+                    <div class="metric">
+                        <span class="metric-label">Task Detected:</span>
+                        <span class="metric-value" id="taskDetected">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Confidence:</span>
+                        <span class="metric-value" id="confidence">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Model Selected:</span>
+                        <span class="metric-value" id="modelSelected">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Routing Method:</span>
+                        <span class="metric-value" id="routingMethod">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Latency:</span>
+                        <span class="metric-value" id="latency">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>💬 Response</h2>
+                <div id="response" class="response-box empty">
+                    Waiting for query...
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>📊 System Architecture</h2>
+                <div class="architecture">Query → TaskDetector
+    ↓
+[Confidence > 0.6?]
+    ├─ YES → Direct Routing
+    │         ├─ conversation → llama3.2:3b (Fast)
+    │         └─ code_* → qwen3:4b (Thinking)
+    │
+    └─ NO  → AdaptiveRouter
+              ├─ LLM Analysis
+              ├─ Intent Detection
+              ├─ Complexity Check
+              └─ Smart Selection</div>
+                
+                <div style="margin-top: 20px;">
+                    <span class="badge badge-fast">⚡ Fast Model (2-5s)</span>
+                    <span class="badge badge-thinking">🧠 Thinking Model (30-60s)</span>
+                    <span class="badge badge-router">🎯 Router Analysis (5-10s)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function setQuery(text) {
+            document.getElementById('queryInput').value = text;
+        }
+
+        async function submitQuery() {
+            const query = document.getElementById('queryInput').value.trim();
+            if (!query) {
+                alert('Please enter a query');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Processing<span class="loading"></span>';
+
+            // Reset UI
+            document.getElementById('response').className = 'response-box empty';
+            document.getElementById('response').textContent = 'Processing...';
+            document.getElementById('taskDetected').textContent = '...';
+            document.getElementById('confidence').textContent = '...';
+            document.getElementById('modelSelected').textContent = '...';
+            document.getElementById('routingMethod').textContent = '...';
+            document.getElementById('latency').textContent = '...';
+
+            try {
+                const response = await fetch('/api/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+
+                const data = await response.json();
+
+                // Update UI with results
+                document.getElementById('taskDetected').textContent = data.task;
+                document.getElementById('confidence').textContent = (data.confidence * 100).toFixed(1) + '%';
+                document.getElementById('modelSelected').textContent = data.model || 'Unknown';
+                document.getElementById('routingMethod').textContent = data.routing_method || 'Direct';
+                document.getElementById('latency').textContent = data.latency_ms.toFixed(0) + 'ms';
+                
+                const responseBox = document.getElementById('response');
+                responseBox.className = 'response-box';
+                responseBox.textContent = data.response;
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('response').textContent = 'Error: ' + error.message;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Process Query';
+            }
+        }
+
+        // Allow Enter to submit (with Shift+Enter for new line)
+        document.getElementById('queryInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitQuery();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+{
+  "timestamp": "2025-12-17T12:13:07.342520",
+  "results": [
+    {
+      "query": "What time is it?",
+      "answer": "",
+      "success": false,
+      "time": 0.15006351470947266
+    },
+    {
+      "query": "What's 25 times 4?",
+      "answer": "",
+      "success": false,
+      "time": 0.16717100143432617
+    },
+    {
+      "query": "What's the weather in London?",
+      "answer": "",
+      "success": false,
+      "time": 0.13011407852172852
+    },
+    {
+      "query": "Summarize this: Python is a programming language that lets you work quickly.",
+      "answer": "",
+      "success": false,
+      "time": 0.11381101608276367
+    },
+    {
+      "query": "Create a todo list: buy milk, call mom, finish homework",
+      "answer": "",
+      "success": false,
+      "time": 0.12243485450744629
+    },
+    {
+      "query": "Take a screenshot and describe what you see",
+      "answer": "",
+      "success": false,
+      "time": 0.12815070152282715
+    },
+    {
+      "query": "How many days until Christmas?",
+      "answer": "",
+      "success": false,
+      "time": 0.1300053596496582
+    }
+  ]
+}

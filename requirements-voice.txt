@@ -1,0 +1,23 @@
+# STARK Voice Dependencies
+# Install with: pip install -r requirements-voice.txt
+
+# Speech-to-Text (Whisper)
+faster-whisper>=1.0.0
+
+# Wake Word Detection
+openwakeword>=0.5.0
+
+# Text-to-Speech
+piper-tts>=1.2.0
+pyttsx3>=2.90
+
+# Audio I/O
+sounddevice>=0.4.6
+soundfile>=0.12.1
+numpy>=1.24.0
+
+# Notifications
+plyer>=2.1.0
+
+# Optional: Cloud TTS fallback
+# edge-tts>=6.1.0

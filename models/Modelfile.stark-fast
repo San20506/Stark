@@ -1,0 +1,12 @@
+# STARK Qwen3 Model - No Thinking Mode
+# Creates a faster variant without reasoning delay
+
+FROM qwen3:4b
+
+# System prompt with /no_think to disable thinking mode
+SYSTEM """You are STARK, a helpful AI assistant. Be concise and direct. /no_think"""
+
+# Model parameters for faster response
+PARAMETER temperature 0.7
+PARAMETER top_p 0.9
+PARAMETER num_predict 512

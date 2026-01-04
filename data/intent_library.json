@@ -1,0 +1,189 @@
+{
+  "time": [
+    "what time is it",
+    "current time",
+    "tell me the time",
+    "what's the time now",
+    "time please",
+    "what is the current time",
+    "do you know the time",
+    "can you tell me the time",
+    "give me the time"
+  ],
+  "date": [
+    "what's the date",
+    "today's date",
+    "what day is it",
+    "current date",
+    "what is today",
+    "what's the date today",
+    "tell me today's date",
+    "what day is today",
+    "give me today's date"
+  ],
+  "weather": [
+    "what's the weather",
+    "weather forecast",
+    "is it going to rain",
+    "how's the weather in",
+    "temperature outside",
+    "what's the weather in Tokyo",
+    "weather in New York",
+    "will it rain today",
+    "what's the temperature",
+    "how hot is it outside",
+    "check the weather",
+    "weather report"
+  ],
+  "calculator": [
+    "calculate",
+    "what is 5 times 7",
+    "solve this math",
+    "add 10 and 20",
+    "divide 100 by 5",
+    "calculate 25 times 4",
+    "what's 50 plus 30",
+    "multiply 8 by 9",
+    "compute the sum of",
+    "do the math"
+  ],
+  "alarm": [
+    "set an alarm",
+    "wake me up at",
+    "alarm for 7am",
+    "set timer for",
+    "remind me in 5 minutes",
+    "set alarm for 8 o'clock",
+    "create an alarm",
+    "timer for 30 seconds",
+    "set a wake up alarm"
+  ],
+  "reminder": [
+    "remind me to",
+    "set a reminder",
+    "don't let me forget",
+    "remember to",
+    "create reminder",
+    "remind me to call mom",
+    "set reminder for meeting",
+    "remind me about",
+    "I need a reminder for"
+  ],
+  "search_web": [
+    "search for",
+    "google",
+    "look up",
+    "find information about",
+    "search the web for",
+    "search for python tutorials",
+    "google how to",
+    "look up the definition of",
+    "find me information on",
+    "web search for"
+  ],
+  "open_app": [
+    "open",
+    "launch",
+    "start",
+    "run application",
+    "open program",
+    "open notepad",
+    "launch chrome",
+    "start the browser",
+    "open calculator app",
+    "run visual studio code",
+    "open spotify"
+  ],
+  "greeting": [
+    "hello",
+    "hi",
+    "hey there",
+    "good morning",
+    "good afternoon",
+    "hello alfred",
+    "hi there",
+    "hey alfred",
+    "greetings"
+  ],
+  "goodbye": [
+    "goodbye",
+    "bye",
+    "see you later",
+    "talk to you later",
+    "exit",
+    "bye bye",
+    "see ya",
+    "good night",
+    "I'm leaving"
+  ],
+  "thank_you": [
+    "thank you",
+    "thanks",
+    "appreciate it",
+    "thanks a lot",
+    "thank you so much",
+    "that's helpful",
+    "thanks for that"
+  ],
+  "general_conversation": [
+    "how are you",
+    "tell me a joke",
+    "what can you do",
+    "help me",
+    "I have a question",
+    "who are you",
+    "what are you",
+    "can you help me"
+  ],
+  "play_music": [
+    "play music",
+    "play some songs",
+    "play my playlist",
+    "start playing music",
+    "put on some music"
+  ],
+  "stop": [
+    "stop",
+    "cancel",
+    "nevermind",
+    "abort",
+    "quit"
+  ],
+  "volume": [
+    "turn up the volume",
+    "volume down",
+    "lower the sound",
+    "increase volume",
+    "mute"
+  ],
+  "screenshot": [
+    "take a screenshot",
+    "capture the screen",
+    "screenshot please",
+    "grab the screen"
+  ],
+  "type_text": [
+    "type this",
+    "write this text",
+    "type out",
+    "enter this text"
+  ],
+  "click": [
+    "click on",
+    "click the button",
+    "press that",
+    "click there"
+  ],
+  "navigate": [
+    "go to",
+    "navigate to",
+    "open website",
+    "browse to"
+  ],
+  "close": [
+    "close window",
+    "close this",
+    "close the app",
+    "shut down"
+  ]
+}

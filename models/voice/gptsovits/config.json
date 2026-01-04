@@ -1,0 +1,10 @@
+{
+  "model_name": "STARK Voice (GPT-SoVITS)",
+  "gpt_model": "gpt_model.ckpt",
+  "sovits_model": "sovits_model.pth",
+  "reference_audio": "reference.wav",
+  "reference_text": "The birch canoe slid on the smooth planks. Glue the sheet to the dark blue background. It's easy to ",
+  "language": "en",
+  "mode": "few-shot",
+  "note": "Uses pretrained models + reference audio for voice cloning"
+}

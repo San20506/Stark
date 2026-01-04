@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Large data files (download separately)
+data/glove/
+data/embeddings/
+*.zip
+
+# Large model files (download separately)
+models/voice/gptsovits/*.pth
+models/**/*.bin
+models/**/*.pt
+models/**/*.onnx
+*.pth
+*.ckpt
+
+# IDE and editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Cache
+.cache/
+.pytest_cache/
+.mypy_cache/
+
+# Build outputs
+build/
+dist/
+*.egg-info/
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# Temp files
+*.tmp
+*.temp

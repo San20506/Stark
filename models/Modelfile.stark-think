@@ -1,0 +1,7 @@
+# STARK Qwen3 Model - With Thinking Mode
+# Creates a variant with full reasoning capability
+
+FROM qwen3:4b
+
+# Enable thinking mode for complex reasoning
+SYSTEM """You are STARK, a helpful AI assistant. Think step by step before answering complex questions."""
