@@ -34,6 +34,12 @@ from core.constants import (
     GPU_DEVICE,
     VRAM_LIMIT_GB,
     LOG_LEVEL,
+    MCP_SERVER_ENABLED,
+    MCP_SERVER_HOST,
+    MCP_SERVER_PORT,
+    MCP_CLIENT_ENABLED,
+    MCP_CLIENT_TIMEOUT_SECONDS,
+    MCP_MAX_EXTERNAL_SERVERS,
 )
 
 logger = logging.getLogger(__name__)
@@ -96,8 +102,8 @@ class HardwareConfig(BaseModel):
 class LoggingConfig(BaseModel):
     """Logging configuration."""
     
-    level: str = Field(default=LOG_LEVEL)
-    to_file: bool = Field(default=True)
+    level: str = Field(default=LOG_LEVEL, description="Log level")
+    log_to_file: bool = Field(default=True, description="Log to file")
     log_dir: str = Field(default=str(LOGS_DIR))
     
     @validator("level")
@@ -106,6 +112,30 @@ class LoggingConfig(BaseModel):
         if v.upper() not in allowed:
             raise ValueError(f"level must be one of {allowed}")
         return v.upper()
+
+
+class MCPServerConfig(BaseModel):
+    """MCP Server configuration."""
+    
+    enabled: bool = Field(default=MCP_SERVER_ENABLED, description="Enable MCP server")
+    host: str = Field(default=MCP_SERVER_HOST, description="MCP server host")
+    port: int = Field(default=MCP_SERVER_PORT, description="MCP server port")
+    name: str = Field(default="STARK", description="MCP server name")
+
+
+class MCPClientConfig(BaseModel):
+    """MCP Client configuration."""
+    
+    enabled: bool = Field(default=MCP_CLIENT_ENABLED, description="Enable MCP client")
+    timeout_seconds: int = Field(default=MCP_CLIENT_TIMEOUT_SECONDS, description="Client timeout")
+    max_servers: int = Field(default=MCP_MAX_EXTERNAL_SERVERS, description="Max external servers")
+
+
+class MCPConfig(BaseModel):
+    """MCP (Model Context Protocol) configuration."""
+    
+    server: MCPServerConfig = Field(default_factory=MCPServerConfig)
+    client: MCPClientConfig = Field(default_factory=MCPClientConfig)
 
 
 class STARKConfig(BaseModel):
@@ -117,6 +147,7 @@ class STARKConfig(BaseModel):
     task: TaskConfig = Field(default_factory=TaskConfig)
     hardware: HardwareConfig = Field(default_factory=HardwareConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
+    mcp: MCPConfig = Field(default_factory=MCPConfig)
     
     # Paths
     project_root: str = Field(default=str(PROJECT_ROOT))
@@ -185,7 +216,7 @@ class ConfigLoader:
             logger.warning(f"Failed to load YAML config: {e}")
             return {}
     
-    def _apply_env_overrides(self, config: Dict[str, Any]) -> Dict[str, Any]:
+def _apply_env_overrides(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """
         Apply environment variable overrides.
         
@@ -194,27 +225,43 @@ class ConfigLoader:
         """
         env_mapping = {
             "STARK_MODEL_NAME": ("model", "name"),
-            "STARK_MODEL_QUANTIZATION": ("model", "quantization"),
+            "STARK_MODEL_URL": ("model", "base_url"),
             "STARK_LORA_RANK": ("lora", "rank"),
             "STARK_LORA_ALPHA": ("lora", "alpha"),
+            "STARK_LEARNING_ENABLED": ("learning", "enabled"),
             "STARK_LEARNING_BATCH_SIZE": ("learning", "batch_size"),
             "STARK_LEARNING_LR": ("learning", "learning_rate"),
             "STARK_HARDWARE_DEVICE": ("hardware", "device"),
             "STARK_HARDWARE_VRAM_LIMIT": ("hardware", "vram_limit_gb"),
             "STARK_LOG_LEVEL": ("logging", "level"),
+            "STARK_MCP_SERVER_ENABLED": ("mcp", "server", "enabled"),
+            "STARK_MCP_SERVER_HOST": ("mcp", "server", "host"),
+            "STARK_MCP_SERVER_PORT": ("mcp", "server", "port"),
+            "STARK_MCP_CLIENT_ENABLED": ("mcp", "client", "enabled"),
+            "STARK_MCP_CLIENT_TIMEOUT": ("mcp", "client", "timeout_seconds"),
+            "STARK_MCP_MAX_SERVERS": ("mcp", "client", "max_servers"),
         }
         
-        for env_var, (section, key) in env_mapping.items():
+for env_var, path in env_mapping.items():
             value = os.environ.get(env_var)
             if value is not None:
-                if section not in config:
-                    config[section] = {}
+                # Navigate nested structure
+                current = config
+                for key in path[:-1]:
+                    if key not in current:
+                        current[key] = {}
+                    current = current[key]
+                
+                final_key = path[-1]
                 # Type conversion
-                if key in ("rank", "alpha", "batch_size"):
+                if final_key in ("rank", "alpha", "batch_size", "port", "timeout_seconds", "max_servers"):
                     value = int(value)
-                elif key in ("learning_rate", "vram_limit_gb"):
+                elif final_key in ("learning_rate", "vram_limit_gb"):
                     value = float(value)
-                config[section][key] = value
+                elif final_key in ("enabled",):
+                    value = value.lower() in ("true", "1", "yes", "on")
+                
+                current[final_key] = value
                 logger.debug(f"Applied env override: {env_var}={value}")
                 
         return config
@@ -234,12 +281,12 @@ class ConfigLoader:
             yaml.dump(self._config.dict(), f, default_flow_style=False)
         logger.info(f"Saved config to {output_path}")
     
-    @property
+@property
     def config(self) -> STARKConfig:
         """Get current configuration, loading if necessary."""
         if self._config is None:
             self.load()
-        return self._config
+        return self._config  # type: ignore
 
 
 # ==============================================================================

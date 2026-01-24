@@ -210,6 +210,42 @@ VRAM_CRITICAL_THRESHOLD_GB: Final[float] = 7.5  # Trigger cleanup
 CPU_CRITICAL_THRESHOLD_PERCENT: Final[float] = 95.0
 
 # ==============================================================================
+# MCP (MODEL CONTEXT PROTOCOL) CONFIGURATION
+# ==============================================================================
+
+# MCP Server Settings (expose STARK capabilities)
+MCP_SERVER_ENABLED: Final[bool] = True
+MCP_SERVER_HOST: Final[str] = "localhost"
+MCP_SERVER_PORT: Final[int] = 8080
+MCP_SERVER_NAME: Final[str] = "STARK"
+MCP_SERVER_VERSION: Final[str] = "0.1.0"
+
+# MCP Client Settings (access external apps)
+MCP_CLIENT_ENABLED: Final[bool] = True
+MCP_CLIENT_TIMEOUT_SECONDS: Final[int] = 30
+MCP_MAX_EXTERNAL_SERVERS: Final[int] = 10
+
+# MCP Tool Categories
+MCP_TOOL_CATEGORIES: Final[dict] = {
+    "code": ["code_generation", "code_explanation", "code_review", "error_debugging"],
+    "file": ["file_read", "file_write", "file_search", "file_analyze"],
+    "web": ["web_scrape", "web_search", "web_interact", "web_download"],
+    "system": ["system_info", "system_control", "health_monitor", "task_planning"],
+    "memory": ["memory_store", "memory_recall", "memory_search", "memory_analyze"],
+    "learning": ["adapter_create", "adapter_train", "adapter_list", "adapter_stats"],
+}
+
+# MCP Resource Types
+MCP_RESOURCE_TYPES: Final[list] = [
+    "config",      # System configuration files
+    "logs",        # System logs and debug info
+    "memory",      # Neuromorphic memory data
+    "adapters",    # LoRA adapter files
+    "models",      # Model information and stats
+    "agents",      # Agent status and capabilities
+]
+
+# ==============================================================================
 # VERSION & METADATA
 # ==============================================================================
 

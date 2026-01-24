@@ -20,6 +20,8 @@ from core.constants import (
     OLLAMA_BASE_URL,
     TASK_MODELS,
     OLLAMA_DEFAULT_MODEL,
+    MCP_SERVER_ENABLED,
+    MCP_CLIENT_ENABLED,
 )
 from core.config import get_config, STARKConfig
 from core.task_detector import get_detector, TaskDetector
@@ -107,6 +109,7 @@ class STARK:
         self._memory = None  # NeuromorphicMemory
         self._learner = None  # ContinualLearner
         self._notifier = None  # NotificationManager
+        self._mcp_manager = None  # MCPManager
         self._ollama_available = False
         
         # State
@@ -125,6 +128,34 @@ class STARK:
     # LIFECYCLE
     # =========================================================================
     
+    async def start_async(self) -> None:
+        """Start STARK system and all background services (async version)."""
+        with self._lock:
+            if self._running:
+                logger.warning("STARK already running")
+                return
+            
+            logger.info("Starting STARK system...")
+            self._load_modules()
+            
+            if self._learner is not None:
+                self._learner.start()
+                logger.info("Background learning thread started")
+            
+            # Start MCP manager if enabled
+            if MCP_SERVER_ENABLED or MCP_CLIENT_ENABLED:
+                try:
+                    from mcp import get_mcp_manager
+                    self._mcp_manager = get_mcp_manager()
+                    await self._mcp_manager.start()
+                    logger.info("MCP Manager started")
+                except Exception as e:
+                    logger.warning(f"Failed to start MCP Manager: {e}")
+            
+            self._running = True
+            self._start_time = datetime.now()
+            logger.info("STARK system started successfully")
+
     def start(self) -> None:
         """Start STARK system and all background services."""
         with self._lock:
@@ -138,6 +169,25 @@ class STARK:
             if self._learner is not None:
                 self._learner.start()
                 logger.info("Background learning thread started")
+            
+            # Start MCP manager if enabled
+            if MCP_SERVER_ENABLED or MCP_CLIENT_ENABLED:
+                try:
+                    import asyncio
+                    from mcp import get_mcp_manager
+                    self._mcp_manager = get_mcp_manager()
+                    # Start MCP in background thread
+                    def start_mcp():
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        loop.run_until_complete(self._mcp_manager.start())
+                        loop.close()
+                    
+                    mcp_thread = threading.Thread(target=start_mcp, daemon=True)
+                    mcp_thread.start()
+                    logger.info("MCP Manager started in background")
+                except Exception as e:
+                    logger.warning(f"Failed to start MCP Manager: {e}")
             
             self._running = True
             self._start_time = datetime.now()
@@ -155,6 +205,13 @@ class STARK:
             if self._learner is not None and self._learner.is_running():
                 self._learner.stop(timeout=5.0)
                 logger.info("Background learning thread stopped")
+            
+            if self._mcp_manager is not None:
+                try:
+                    self._mcp_manager.stop()
+                    logger.info("MCP Manager stopped")
+                except Exception as e:
+                    logger.error(f"Failed to stop MCP Manager: {e}")
             
             if self._memory is not None:
                 try:
@@ -748,6 +805,119 @@ class STARK:
             logger.error(f"Voice mode error: {e}")
         
         logger.info("Voice mode ended")
+    
+    # =========================================================================
+    # MCP INTEGRATION
+    # =========================================================================
+    
+    async def process_query_with_mcp(self, 
+                                     query: str, 
+                                     task_type_hint: Optional[str] = None,
+                                     use_external_tools: bool = True) -> Dict[str, Any]:
+        """
+        Process a query using both STARK and external MCP tools.
+        
+        Args:
+            query: User query
+            task_type_hint: Optional task type hint
+            use_external_tools: Whether to use external MCP tools
+            
+        Returns:
+            Combined result with external tool usage
+        """
+        # First, get STARK's response
+        stark_result = self.process_query(query, task_type_hint)
+        
+        if not use_external_tools or self._mcp_manager is None:
+            return stark_result
+        
+        try:
+            # Use MCP agent to enhance with external tools
+            import asyncio
+            mcp_result = await self._mcp_manager.agent.execute_with_external_tools(
+                query, {"stark_result": stark_result}
+            )
+            
+            # Combine results
+            combined_result = stark_result.copy()
+            combined_result.update({
+                "mcp_enhanced": True,
+                "external_tools_used": mcp_result.get("external_tools_used", []),
+                "combined_output": mcp_result.get("combined_output", stark_result.get("response", "")),
+                "mcp_success": mcp_result.get("success", False),
+            })
+            
+            return combined_result
+            
+        except Exception as e:
+            logger.warning(f"MCP enhancement failed: {e}")
+            # Return original STARK result if MCP fails
+            stark_result["mcp_enhanced"] = False
+            stark_result["mcp_error"] = str(e)
+            return stark_result
+    
+    def get_mcp_status(self) -> Dict[str, Any]:
+        """
+        Get MCP system status and available servers.
+        
+        Returns:
+            MCP status information
+        """
+        if self._mcp_manager is None:
+            return {"enabled": False, "status": "not_initialized"}
+        
+        try:
+            client = self._mcp_manager.client
+            return {
+                "enabled": True,
+                "servers_connected": len(client.connections),
+                "available_servers": {
+                    server_id: client.get_server_info(server_id)
+                    for server_id in client.available_servers
+                },
+                "available_tools": client.list_available_tools(),
+            }
+        except Exception as e:
+            return {"enabled": True, "error": str(e)}
+    
+    async def connect_mcp_server(self, 
+                                  server_id: str, 
+                                  command: str, 
+                                  args: Optional[List[str]] = None,
+                                  env: Optional[Dict[str, str]] = None) -> bool:
+        """
+        Connect to an external MCP server.
+        
+        Args:
+            server_id: Unique server identifier
+            command: Command to start server
+            args: Command arguments
+            env: Environment variables
+            
+        Returns:
+            True if connection successful
+        """
+        if self._mcp_manager is None:
+            logger.error("MCP Manager not initialized")
+            return False
+        
+        return await self._mcp_manager.client.connect_server(server_id, command, args, env)
+    
+    async def disconnect_mcp_server(self, server_id: str) -> bool:
+        """
+        Disconnect from an external MCP server.
+        
+        Args:
+            server_id: Server identifier
+            
+        Returns:
+            True if disconnection successful
+        """
+        if self._mcp_manager is None:
+            logger.error("MCP Manager not initialized")
+            return False
+        
+        return await self._mcp_manager.client.disconnect_server(server_id)
     
     def __repr__(self) -> str:
         return f"STARK(v{STARK_VERSION}, running={self._running}, queries={self._queries_processed})"
