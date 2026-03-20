@@ -216,7 +216,7 @@ class ConfigLoader:
             logger.warning(f"Failed to load YAML config: {e}")
             return {}
     
-def _apply_env_overrides(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    def _apply_env_overrides(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """
         Apply environment variable overrides.
         
@@ -242,7 +242,7 @@ def _apply_env_overrides(self, config: Dict[str, Any]) -> Dict[str, Any]:
             "STARK_MCP_MAX_SERVERS": ("mcp", "client", "max_servers"),
         }
         
-for env_var, path in env_mapping.items():
+        for env_var, path in env_mapping.items():
             value = os.environ.get(env_var)
             if value is not None:
                 # Navigate nested structure
@@ -281,7 +281,7 @@ for env_var, path in env_mapping.items():
             yaml.dump(self._config.dict(), f, default_flow_style=False)
         logger.info(f"Saved config to {output_path}")
     
-@property
+    @property
     def config(self) -> STARKConfig:
         """Get current configuration, loading if necessary."""
         if self._config is None:
