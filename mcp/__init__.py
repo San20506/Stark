@@ -34,9 +34,6 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from mcp import FastMCP
-from mcp.client.stdio import stdio_client
-from mcp.types import TextContent
 
 from core.constants import (
     MCP_CLIENT_ENABLED,
@@ -75,6 +72,7 @@ class STARKMCPServer:
     
     def __init__(self):
         """Initialize MCP server."""
+        from mcp.server.fastmcp import FastMCP
         self.server = FastMCP(MCP_SERVER_NAME)
         self._setup_tools()
         self._setup_resources()
@@ -458,19 +456,19 @@ class STARKMCPClient:
             return False
             
         try:
-            from mcp import StdioServerParameters
-            
+            from mcp.client.stdio import StdioServerParameters, stdio_client
+            from mcp.client.session import ClientSession
+
             server_params = StdioServerParameters(
                 command=command,
                 args=args or [],
                 env=env
             )
-            
+
             # Create stdio client connection
             (read, write) = await stdio_client(server_params).__aenter__()
-            
+
             # Create client session
-            from mcp import ClientSession
             session = ClientSession(read, write)
             await session.initialize()
             
@@ -564,6 +562,7 @@ class STARKMCPClient:
                 "tool_name": tool_name,
             }
             
+            from mcp.types import TextContent
             for content in result.content:
                 if isinstance(content, TextContent):
                     response["content"].append({

@@ -12,7 +12,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, Optional
 from dataclasses import dataclass, field
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from core.constants import (
     PROJECT_ROOT,
@@ -40,6 +40,26 @@ from core.constants import (
     MCP_CLIENT_ENABLED,
     MCP_CLIENT_TIMEOUT_SECONDS,
     MCP_MAX_EXTERNAL_SERVERS,
+    MEMORY_V2_ENABLED,
+    ACTIR_DECAY_RATE,
+    ACTIR_ACTIVATION_FLOOR,
+    ACTIR_ACTIVATION_CEILING,
+    ACTIR_NOISE_STD,
+    APPRAISAL_SMOOTHING_WINDOW,
+    APPRAISAL_NOVELTY_THRESHOLD,
+    EPISODE_SURPRISE_THRESHOLD,
+    EPISODE_RETRIEVAL_SEM_WEIGHT,
+    EPISODE_RETRIEVAL_TEMP_WEIGHT,
+    AMEM_LINK_SIMILARITY_THRESH,
+    AMEM_PROMOTION_QUORUM,
+    AMEM_PROMOTION_SESSION_MIN,
+    DIARY_MAX_ENTRIES_SOFT_CAP,
+    REFLECTION_TRIGGER_DELAY_SEC,
+    REFLECTION_MODEL_NAME,
+    CONSOLIDATION_CONFLICT_THRESH,
+    CONSOLIDATION_SCHEDULE,
+    TOOL_SCHEMA_CONFIDENCE_DECAY,
+    TOOL_SCHEMA_STALENESS_DAYS,
 )
 
 logger = logging.getLogger(__name__)
@@ -49,9 +69,10 @@ logger = logging.getLogger(__name__)
 # CONFIGURATION MODELS (Pydantic for validation)
 # ==============================================================================
 
+
 class ModelConfig(BaseModel):
     """Model-related configuration for Ollama."""
-    
+
     name: str = Field(default=OLLAMA_MODEL, description="Ollama model name")
     base_url: str = Field(default=OLLAMA_BASE_URL, description="Ollama API URL")
     max_length: int = Field(default=MAX_LENGTH, ge=1, le=32768)
@@ -60,19 +81,26 @@ class ModelConfig(BaseModel):
 
 class LoRAConfig(BaseModel):
     """LoRA adapter configuration."""
-    
+
     rank: int = Field(default=LORA_RANK, ge=1, le=128)
     alpha: int = Field(default=LORA_ALPHA, ge=1, le=256)
     dropout: float = Field(default=0.1, ge=0.0, le=0.5)
-    target_modules: list = Field(default=[
-        "q_proj", "k_proj", "v_proj", "o_proj",
-        "gate_proj", "up_proj", "down_proj"
-    ])
+    target_modules: list = Field(
+        default=[
+            "q_proj",
+            "k_proj",
+            "v_proj",
+            "o_proj",
+            "gate_proj",
+            "up_proj",
+            "down_proj",
+        ]
+    )
 
 
 class LearningConfig(BaseModel):
     """Continuous learning configuration."""
-    
+
     batch_size: int = Field(default=BATCH_SIZE, ge=1, le=128)
     learning_rate: float = Field(default=LEARNING_RATE, ge=1e-6, le=1e-2)
     replay_ratio: float = Field(default=0.5, ge=0.0, le=1.0)  # 50% old, 50% new
@@ -82,18 +110,60 @@ class LearningConfig(BaseModel):
 
 class TaskConfig(BaseModel):
     """Task detection configuration."""
-    
+
     detection_threshold: float = Field(default=TASK_DETECTION_THRESHOLD, ge=0.0, le=1.0)
-    categories: list = Field(default=[
-        "error_debugging", "code_explanation", "task_planning",
-        "research", "health_monitoring", "system_control",
-        "conversation", "math_reasoning"
-    ])
+    categories: list = Field(
+        default=[
+            "error_debugging",
+            "code_explanation",
+            "task_planning",
+            "research",
+            "health_monitoring",
+            "system_control",
+            "conversation",
+            "math_reasoning",
+        ]
+    )
+
+
+class MemoryV2Config(BaseModel):
+    enabled: bool = Field(default=MEMORY_V2_ENABLED)
+
+    actir_decay_rate: float = Field(default=ACTIR_DECAY_RATE)
+    actir_activation_floor: float = Field(default=ACTIR_ACTIVATION_FLOOR)
+    actir_activation_ceiling: float = Field(default=ACTIR_ACTIVATION_CEILING)
+    actir_noise_std: float = Field(default=ACTIR_NOISE_STD)
+
+    appraisal_smoothing_window: int = Field(default=APPRAISAL_SMOOTHING_WINDOW, ge=1)
+    appraisal_novelty_threshold: float = Field(default=APPRAISAL_NOVELTY_THRESHOLD)
+
+    episode_surprise_threshold: float = Field(default=EPISODE_SURPRISE_THRESHOLD)
+    episode_retrieval_sem_weight: float = Field(default=EPISODE_RETRIEVAL_SEM_WEIGHT)
+    episode_retrieval_temp_weight: float = Field(default=EPISODE_RETRIEVAL_TEMP_WEIGHT)
+
+    amem_link_similarity_thresh: float = Field(default=AMEM_LINK_SIMILARITY_THRESH)
+    amem_promotion_quorum: int = Field(default=AMEM_PROMOTION_QUORUM, ge=1)
+    amem_promotion_session_min: int = Field(default=AMEM_PROMOTION_SESSION_MIN, ge=1)
+
+    diary_max_entries_soft_cap: int = Field(default=DIARY_MAX_ENTRIES_SOFT_CAP, ge=1)
+
+    reflection_trigger_delay_sec: int = Field(
+        default=REFLECTION_TRIGGER_DELAY_SEC, ge=0
+    )
+    reflection_model_name: str = Field(default=REFLECTION_MODEL_NAME)
+
+    consolidation_conflict_thresh: int = Field(
+        default=CONSOLIDATION_CONFLICT_THRESH, ge=1
+    )
+    consolidation_schedule: str = Field(default=CONSOLIDATION_SCHEDULE)
+
+    tool_schema_confidence_decay: float = Field(default=TOOL_SCHEMA_CONFIDENCE_DECAY)
+    tool_schema_staleness_days: int = Field(default=TOOL_SCHEMA_STALENESS_DAYS, ge=1)
 
 
 class HardwareConfig(BaseModel):
     """Hardware resource configuration."""
-    
+
     device: str = Field(default=GPU_DEVICE)
     vram_limit_gb: float = Field(default=VRAM_LIMIT_GB, ge=1.0)
     use_mixed_precision: bool = Field(default=True)
@@ -101,12 +171,13 @@ class HardwareConfig(BaseModel):
 
 class LoggingConfig(BaseModel):
     """Logging configuration."""
-    
+
     level: str = Field(default=LOG_LEVEL, description="Log level")
     log_to_file: bool = Field(default=True, description="Log to file")
     log_dir: str = Field(default=str(LOGS_DIR))
-    
-    @validator("level")
+
+    @field_validator("level")
+    @classmethod
     def validate_level(cls, v):
         allowed = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
         if v.upper() not in allowed:
@@ -116,7 +187,7 @@ class LoggingConfig(BaseModel):
 
 class MCPServerConfig(BaseModel):
     """MCP Server configuration."""
-    
+
     enabled: bool = Field(default=MCP_SERVER_ENABLED, description="Enable MCP server")
     host: str = Field(default=MCP_SERVER_HOST, description="MCP server host")
     port: int = Field(default=MCP_SERVER_PORT, description="MCP server port")
@@ -125,30 +196,35 @@ class MCPServerConfig(BaseModel):
 
 class MCPClientConfig(BaseModel):
     """MCP Client configuration."""
-    
+
     enabled: bool = Field(default=MCP_CLIENT_ENABLED, description="Enable MCP client")
-    timeout_seconds: int = Field(default=MCP_CLIENT_TIMEOUT_SECONDS, description="Client timeout")
-    max_servers: int = Field(default=MCP_MAX_EXTERNAL_SERVERS, description="Max external servers")
+    timeout_seconds: int = Field(
+        default=MCP_CLIENT_TIMEOUT_SECONDS, description="Client timeout"
+    )
+    max_servers: int = Field(
+        default=MCP_MAX_EXTERNAL_SERVERS, description="Max external servers"
+    )
 
 
 class MCPConfig(BaseModel):
     """MCP (Model Context Protocol) configuration."""
-    
+
     server: MCPServerConfig = Field(default_factory=MCPServerConfig)
     client: MCPClientConfig = Field(default_factory=MCPClientConfig)
 
 
 class STARKConfig(BaseModel):
     """Root configuration for STARK system."""
-    
+
     model: ModelConfig = Field(default_factory=ModelConfig)
     lora: LoRAConfig = Field(default_factory=LoRAConfig)
     learning: LearningConfig = Field(default_factory=LearningConfig)
     task: TaskConfig = Field(default_factory=TaskConfig)
     hardware: HardwareConfig = Field(default_factory=HardwareConfig)
+    memory_v2: MemoryV2Config = Field(default_factory=MemoryV2Config)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     mcp: MCPConfig = Field(default_factory=MCPConfig)
-    
+
     # Paths
     project_root: str = Field(default=str(PROJECT_ROOT))
     data_dir: str = Field(default=str(DATA_DIR))
@@ -160,53 +236,54 @@ class STARKConfig(BaseModel):
 # CONFIGURATION LOADER
 # ==============================================================================
 
+
 class ConfigLoader:
     """
     Load and manage STARK configuration from multiple sources.
-    
+
     Priority (highest to lowest):
     1. Environment variables (STARK_*)
     2. YAML config file
     3. Default constants
     """
-    
+
     DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.yaml"
-    
+
     def __init__(self, config_path: Optional[Path] = None):
         """
         Initialize configuration loader.
-        
+
         Args:
             config_path: Path to YAML config file. If None, uses default location.
         """
         self.config_path = config_path or self.DEFAULT_CONFIG_PATH
         self._config: Optional[STARKConfig] = None
-        
+
     def load(self) -> STARKConfig:
         """
         Load configuration from all sources.
-        
+
         Returns:
             STARKConfig: Validated configuration object
         """
         # Start with defaults
         config_dict: Dict[str, Any] = {}
-        
+
         # Load from YAML if exists
         if self.config_path.exists():
             config_dict = self._load_yaml()
             logger.info(f"Loaded config from {self.config_path}")
         else:
             logger.info("No config file found, using defaults")
-            
+
         # Override with environment variables
         config_dict = self._apply_env_overrides(config_dict)
-        
+
         # Validate and create config object
         self._config = STARKConfig(**config_dict)
-        
+
         return self._config
-    
+
     def _load_yaml(self) -> Dict[str, Any]:
         """Load configuration from YAML file."""
         try:
@@ -215,11 +292,11 @@ class ConfigLoader:
         except Exception as e:
             logger.warning(f"Failed to load YAML config: {e}")
             return {}
-    
+
     def _apply_env_overrides(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """
         Apply environment variable overrides.
-        
+
         Environment variables follow pattern: STARK_SECTION_KEY
         Example: STARK_MODEL_NAME, STARK_LEARNING_BATCH_SIZE
         """
@@ -240,8 +317,79 @@ class ConfigLoader:
             "STARK_MCP_CLIENT_ENABLED": ("mcp", "client", "enabled"),
             "STARK_MCP_CLIENT_TIMEOUT": ("mcp", "client", "timeout_seconds"),
             "STARK_MCP_MAX_SERVERS": ("mcp", "client", "max_servers"),
+            "STARK_MEMORY_V2_ENABLED": ("memory_v2", "enabled"),
+            "STARK_MEMORY_V2_ACTIR_DECAY_RATE": ("memory_v2", "actir_decay_rate"),
+            "STARK_MEMORY_V2_ACTIR_ACTIVATION_FLOOR": (
+                "memory_v2",
+                "actir_activation_floor",
+            ),
+            "STARK_MEMORY_V2_ACTIR_ACTIVATION_CEILING": (
+                "memory_v2",
+                "actir_activation_ceiling",
+            ),
+            "STARK_MEMORY_V2_ACTIR_NOISE_STD": ("memory_v2", "actir_noise_std"),
+            "STARK_MEMORY_V2_APPRAISAL_SMOOTHING_WINDOW": (
+                "memory_v2",
+                "appraisal_smoothing_window",
+            ),
+            "STARK_MEMORY_V2_APPRAISAL_NOVELTY_THRESHOLD": (
+                "memory_v2",
+                "appraisal_novelty_threshold",
+            ),
+            "STARK_MEMORY_V2_EPISODE_SURPRISE_THRESHOLD": (
+                "memory_v2",
+                "episode_surprise_threshold",
+            ),
+            "STARK_MEMORY_V2_EPISODE_RETRIEVAL_SEM_WEIGHT": (
+                "memory_v2",
+                "episode_retrieval_sem_weight",
+            ),
+            "STARK_MEMORY_V2_EPISODE_RETRIEVAL_TEMP_WEIGHT": (
+                "memory_v2",
+                "episode_retrieval_temp_weight",
+            ),
+            "STARK_MEMORY_V2_AMEM_LINK_SIMILARITY_THRESH": (
+                "memory_v2",
+                "amem_link_similarity_thresh",
+            ),
+            "STARK_MEMORY_V2_AMEM_PROMOTION_QUORUM": (
+                "memory_v2",
+                "amem_promotion_quorum",
+            ),
+            "STARK_MEMORY_V2_AMEM_PROMOTION_SESSION_MIN": (
+                "memory_v2",
+                "amem_promotion_session_min",
+            ),
+            "STARK_MEMORY_V2_DIARY_MAX_ENTRIES_SOFT_CAP": (
+                "memory_v2",
+                "diary_max_entries_soft_cap",
+            ),
+            "STARK_MEMORY_V2_REFLECTION_TRIGGER_DELAY_SEC": (
+                "memory_v2",
+                "reflection_trigger_delay_sec",
+            ),
+            "STARK_MEMORY_V2_REFLECTION_MODEL_NAME": (
+                "memory_v2",
+                "reflection_model_name",
+            ),
+            "STARK_MEMORY_V2_CONSOLIDATION_CONFLICT_THRESH": (
+                "memory_v2",
+                "consolidation_conflict_thresh",
+            ),
+            "STARK_MEMORY_V2_CONSOLIDATION_SCHEDULE": (
+                "memory_v2",
+                "consolidation_schedule",
+            ),
+            "STARK_MEMORY_V2_TOOL_SCHEMA_CONFIDENCE_DECAY": (
+                "memory_v2",
+                "tool_schema_confidence_decay",
+            ),
+            "STARK_MEMORY_V2_TOOL_SCHEMA_STALENESS_DAYS": (
+                "memory_v2",
+                "tool_schema_staleness_days",
+            ),
         }
-        
+
         for env_var, path in env_mapping.items():
             value = os.environ.get(env_var)
             if value is not None:
@@ -251,36 +399,63 @@ class ConfigLoader:
                     if key not in current:
                         current[key] = {}
                     current = current[key]
-                
+
                 final_key = path[-1]
                 # Type conversion
-                if final_key in ("rank", "alpha", "batch_size", "port", "timeout_seconds", "max_servers"):
+                if final_key in (
+                    "rank",
+                    "alpha",
+                    "batch_size",
+                    "port",
+                    "timeout_seconds",
+                    "max_servers",
+                    "appraisal_smoothing_window",
+                    "amem_promotion_quorum",
+                    "amem_promotion_session_min",
+                    "diary_max_entries_soft_cap",
+                    "reflection_trigger_delay_sec",
+                    "consolidation_conflict_thresh",
+                    "tool_schema_staleness_days",
+                ):
                     value = int(value)
-                elif final_key in ("learning_rate", "vram_limit_gb"):
+                elif final_key in (
+                    "learning_rate",
+                    "vram_limit_gb",
+                    "actir_decay_rate",
+                    "actir_activation_floor",
+                    "actir_activation_ceiling",
+                    "actir_noise_std",
+                    "appraisal_novelty_threshold",
+                    "episode_surprise_threshold",
+                    "episode_retrieval_sem_weight",
+                    "episode_retrieval_temp_weight",
+                    "amem_link_similarity_thresh",
+                    "tool_schema_confidence_decay",
+                ):
                     value = float(value)
                 elif final_key in ("enabled",):
                     value = value.lower() in ("true", "1", "yes", "on")
-                
+
                 current[final_key] = value
                 logger.debug(f"Applied env override: {env_var}={value}")
-                
+
         return config
-    
+
     def save(self, path: Optional[Path] = None) -> None:
         """
         Save current configuration to YAML file.
-        
+
         Args:
             path: Output path. If None, uses config_path.
         """
         if self._config is None:
             raise RuntimeError("No configuration loaded")
-            
+
         output_path = path or self.config_path
         with open(output_path, "w") as f:
             yaml.dump(self._config.dict(), f, default_flow_style=False)
         logger.info(f"Saved config to {output_path}")
-    
+
     @property
     def config(self) -> STARKConfig:
         """Get current configuration, loading if necessary."""
@@ -299,34 +474,34 @@ _config_loader: Optional[ConfigLoader] = None
 def get_config(config_path: Optional[Path] = None) -> STARKConfig:
     """
     Get or create the global configuration singleton.
-    
+
     Args:
         config_path: Optional path to config file (only used on first call)
-        
+
     Returns:
         STARKConfig: The global configuration object
     """
     global _config_loader
-    
+
     if _config_loader is None:
         _config_loader = ConfigLoader(config_path)
         _config_loader.load()
-        
+
     return _config_loader.config
 
 
 def reload_config(config_path: Optional[Path] = None) -> STARKConfig:
     """
     Force reload configuration from disk.
-    
+
     Args:
         config_path: Optional new path to config file
-        
+
     Returns:
         STARKConfig: The reloaded configuration object
     """
     global _config_loader
-    
+
     _config_loader = ConfigLoader(config_path)
     return _config_loader.load()
 
@@ -335,17 +510,18 @@ def reload_config(config_path: Optional[Path] = None) -> STARKConfig:
 # CONVENIENCE FUNCTIONS
 # ==============================================================================
 
+
 def ensure_directories() -> None:
     """Create all required directories if they don't exist."""
     config = get_config()
-    
+
     directories = [
         Path(config.data_dir),
         Path(config.models_dir),
         Path(config.checkpoints_dir),
         Path(config.logging.log_dir),
     ]
-    
+
     for directory in directories:
         directory.mkdir(parents=True, exist_ok=True)
         logger.debug(f"Ensured directory exists: {directory}")
@@ -358,18 +534,18 @@ def ensure_directories() -> None:
 if __name__ == "__main__":
     # Quick test
     logging.basicConfig(level=logging.DEBUG)
-    
+
     print("=" * 60)
     print("STARK Configuration Test")
     print("=" * 60)
-    
+
     config = get_config()
-    
+
     print(f"\nModel: {config.model.name}")
-    print(f"Quantization: {config.model.quantization}")
+    print(f"Model URL: {config.model.base_url}")
     print(f"LoRA Rank: {config.lora.rank}")
     print(f"Batch Size: {config.learning.batch_size}")
     print(f"Device: {config.hardware.device}")
     print(f"Log Level: {config.logging.level}")
-    
+
     print("\n✅ Config loaded successfully!")

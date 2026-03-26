@@ -1,6 +1,6 @@
 # 🚀 STARK: Self-Training Adaptive Reasoning Kernel
 
-**Version 0.1.0 - Genesis** | Built: 2025-12-20
+**Version 0.2.0 — Neuro-Memory** | Built: 2025-12-20 | Current: 2026-03-20
 
 A self-optimizing AI system that learns continuously from interactions. Built for RTX 4060 (8GB VRAM) + 24GB RAM.
 
@@ -76,6 +76,84 @@ STARK/
 ├── config.yaml            # Runtime configuration
 └── README.md              # This file
 ```
+
+---
+
+## 🧠 v0.2.0 Memory Stack Architecture
+
+STARK v0.2.0 adds a four-layer cognitive memory system modelled on human episodic and semantic memory:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                 STARK v0.2.0 MEMORY STACK                      │
+├─────────────────────────────────────────────────────────────────┤
+│  PERCEPTION                                                     │
+│  user input → appraisal_engine.py → 6D appraisal vector          │
+│                                                                 │
+│  WORKING CONTEXT                                               │
+│  thread_state.py — session checkpoint / crash recovery           │
+│  episode_manager.py — EM-LLM surprise-based segmentation        │
+│                                                                 │
+│  LONG-TERM MEMORY (three parallel stores)                       │
+│  diary_store.py — append-only episodic SQLite log                │
+│  activation_scorer.py — ACT-R retrieval ranking (0.7 sem + 0.3 temporal) │
+│  knowledge_graph.py — A-MEM semantic graph with Zettelkasten links │
+│                                                                 │
+│  INFERENCE                                                      │
+│  core/main.py — MEMORY_V2_ENABLED gated predict() path          │
+│                                                                 │
+│  ASYNC REFLECTION (post-conversation, ≤30s)                     │
+│  reflection_loop.py — 3B CPU model, writes diary + tool schemas  │
+│                                                                 │
+│  NIGHTLY CONSOLIDATION                                          │
+│  consolidation.py — promotes diary patterns → knowledge graph     │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Memory Modules
+
+| Module | File | Description |
+|--------|------|-------------|
+| Appraisal Engine | `memory/appraisal_engine.py` | 6D emotion vector: novelty, valence, agency, coping, certainty, goal_relevance |
+| Episode Manager | `memory/episode_manager.py` | EM-LLM surprise-based session segmentation |
+| ACT-R Scorer | `memory/activation_scorer.py` | Base-level activation: log(sum(t_i^-d)) + semantic + noise |
+| Knowledge Graph | `memory/knowledge_graph.py` | A-MEM graph: bidirectional links, episodic→semantic promotion |
+| Diary Store | `memory/diary_store.py` | Append-only SQLite episodic log with semantic/time/emotion/tag query |
+| Reflection Loop | `memory/reflection_loop.py` | Async post-conversation LLM summarization |
+| Consolidation | `memory/consolidation.py` | Background daemon: conflict detection, pattern promotion |
+| Tool Schema Store | `memory/tool_schema_store.py` | Schema CRUD with staleness eviction and confidence-weighted ranking |
+| Thread State | `memory/thread_state.py` | Session persistence with SQLite WAL checkpointing |
+
+### Feature Flag
+
+`MEMORY_V2_ENABLED` in `core/constants.py` (default: `False`) gates the v0.2 path in `core/main.py`. Set to `True` to enable.
+
+### Hardware Budget
+
+| Resource | Budget | Allocation |
+|----------|--------|-----------|
+| VRAM (inference) | ≤ 6.0 GB | LLM + KV cache + embeddings |
+| System RAM | ≤ 12 GB | Diary DB, graph, reflection model, OS |
+
+### v0.2.0 Deliverables
+
+| # | Deliverable | Location |
+|---|-------------|----------|
+| D5 | Appraisal engine | `memory/appraisal_engine.py` |
+| D6 | EM-LLM episode manager | `memory/episode_manager.py` |
+| D7 | ACT-R retrieval scorer | `memory/activation_scorer.py` |
+| D8 | A-MEM knowledge graph | `memory/knowledge_graph.py` |
+| D9 | Diary memory store | `memory/diary_store.py` |
+| D10 | Reflection loop | `memory/reflection_loop.py` |
+| D11 | Consolidation job | `memory/consolidation.py` |
+| D12 | Tool schema store | `memory/tool_schema_store.py` |
+| D13 | Thread state manager | `memory/thread_state.py` |
+| D14 | Updated core/main.py | `core/main.py` |
+| D15 | Updated constants/config | `core/constants.py`, `core/config.py` |
+| D16 | Test suite | `tests/test_memory_v2.py` |
+| D17 | Integration test | `tests/test_memory_integration.py` |
+
+Full plan: `STARK_PLAN.md` | PID: `STARK_PID.md` | PRD: `STARK_PRD.md`
 
 ---
 

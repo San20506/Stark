@@ -36,13 +36,11 @@ TASK_MODELS: Final[dict] = {
     "conversation": "llama3.2:3b",
     "greeting": "llama3.2:3b",
     "general": "llama3.2:3b",
-    
     # Reasoning model for complex tasks (qwen3:4b - thinking capability)
     "error_debugging": "qwen3:4b",
     "code_explanation": "qwen3:4b",
     "code_generation": "qwen3:4b",
     "code_review": "qwen3:4b",
-    
     # Default fallback
     "default": "llama3.2:3b",
 }
@@ -72,7 +70,7 @@ LORA_ALPHA: Final[int] = 16  # Scaling factor (alpha)
 LORA_DROPOUT: Final[float] = 0.1
 LORA_TARGET_MODULES: Final[list] = [
     "q_proj",
-    "k_proj", 
+    "k_proj",
     "v_proj",
     "o_proj",
     "gate_proj",
@@ -114,6 +112,39 @@ GC_INTERVAL_SECONDS: Final[int] = 300  # Run GC every 5 minutes
 GC_BATCH_SIZE: Final[int] = 100  # Nodes to evaluate per GC cycle
 
 # ==============================================================================
+# MEMORY V2 CONFIGURATION
+# ==============================================================================
+
+MEMORY_V2_ENABLED: Final[bool] = False
+
+ACTIR_DECAY_RATE: Final[float] = 0.5
+ACTIR_ACTIVATION_FLOOR: Final[float] = -2.0
+ACTIR_ACTIVATION_CEILING: Final[float] = 3.0
+ACTIR_NOISE_STD: Final[float] = 0.1
+
+APPRAISAL_SMOOTHING_WINDOW: Final[int] = 5
+APPRAISAL_NOVELTY_THRESHOLD: Final[float] = 0.65
+
+EPISODE_SURPRISE_THRESHOLD: Final[float] = 0.65
+EPISODE_RETRIEVAL_SEM_WEIGHT: Final[float] = 0.70
+EPISODE_RETRIEVAL_TEMP_WEIGHT: Final[float] = 0.30
+
+AMEM_LINK_SIMILARITY_THRESH: Final[float] = 0.75
+AMEM_PROMOTION_QUORUM: Final[int] = 5
+AMEM_PROMOTION_SESSION_MIN: Final[int] = 3
+
+DIARY_MAX_ENTRIES_SOFT_CAP: Final[int] = 50_000
+
+REFLECTION_TRIGGER_DELAY_SEC: Final[int] = 30
+REFLECTION_MODEL_NAME: Final[str] = "qwen2.5:3b"
+
+CONSOLIDATION_CONFLICT_THRESH: Final[int] = 10
+CONSOLIDATION_SCHEDULE: Final[str] = "02:00"
+
+TOOL_SCHEMA_CONFIDENCE_DECAY: Final[float] = 0.5
+TOOL_SCHEMA_STALENESS_DAYS: Final[int] = 30
+
+# ==============================================================================
 # CONTINUOUS LEARNING CONFIGURATION
 # ==============================================================================
 
@@ -138,14 +169,14 @@ TARGET_LOSS_DECREASE_PER_100: Final[float] = 0.01  # 0.5-1.5% per 100 experience
 
 # Task categories (practical focus)
 TASK_CATEGORIES: Final[list] = [
-    "error_debugging",      # Analyze and fix errors
-    "code_explanation",     # Explain code functionality
-    "task_planning",        # Create plans and roadmaps
-    "research",             # Find and summarize information
-    "health_monitoring",    # Posture, breaks, screen time
-    "system_control",       # Desktop automation
-    "conversation",         # General chat and follow-ups
-    "math_reasoning",       # Calculations and logic
+    "error_debugging",  # Analyze and fix errors
+    "code_explanation",  # Explain code functionality
+    "task_planning",  # Create plans and roadmaps
+    "research",  # Find and summarize information
+    "health_monitoring",  # Posture, breaks, screen time
+    "system_control",  # Desktop automation
+    "conversation",  # General chat and follow-ups
+    "math_reasoning",  # Calculations and logic
 ]
 
 # Classification
@@ -237,12 +268,12 @@ MCP_TOOL_CATEGORIES: Final[dict] = {
 
 # MCP Resource Types
 MCP_RESOURCE_TYPES: Final[list] = [
-    "config",      # System configuration files
-    "logs",        # System logs and debug info
-    "memory",      # Neuromorphic memory data
-    "adapters",    # LoRA adapter files
-    "models",      # Model information and stats
-    "agents",      # Agent status and capabilities
+    "config",  # System configuration files
+    "logs",  # System logs and debug info
+    "memory",  # Neuromorphic memory data
+    "adapters",  # LoRA adapter files
+    "models",  # Model information and stats
+    "agents",  # Agent status and capabilities
 ]
 
 # ==============================================================================
