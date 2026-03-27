@@ -302,6 +302,10 @@ class STARK:
             self._load_modules()
 
         try:
+            with self._lock:
+                self._queries_processed += 1
+                self._last_query_time = datetime.now()
+
             # Step 0: Check for actionable intents (FAST PATH for system control)
             # This bypasses the slow LLM entirely for actions like "open firefox"
             try:
@@ -422,10 +426,6 @@ class STARK:
                     logger.warning(f"Memory store failed: {e}")
 
             latency_ms = (time.perf_counter() - start_time) * 1000
-
-            with self._lock:
-                self._queries_processed += 1
-                self._last_query_time = datetime.now()
 
             if latency_ms > TARGET_INFERENCE_LATENCY_MS:
                 logger.warning(f"Latency {latency_ms:.1f}ms exceeds target")
@@ -925,6 +925,20 @@ class STARK:
             stark_result["mcp_error"] = str(e)
             return stark_result
 
+    def process_query(self, query: str, task_type_hint: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Process a query and return a dict result. Delegates to predict().
+
+        Args:
+            query: Natural language query
+            task_type_hint: Optional task type hint
+
+        Returns:
+            Result dict with response, task, confidence, etc.
+        """
+        result = self.predict(query)
+        return result.to_dict()
+
     def get_mcp_status(self) -> Dict[str, Any]:
         """
         Get MCP system status and available servers.
@@ -939,7 +953,7 @@ class STARK:
             client = self._mcp_manager.client
             return {
                 "enabled": True,
-                "servers_connected": len(client.connections),
+                "servers_connected": len(client.available_servers),
                 "available_servers": {
                     server_id: client.get_server_info(server_id)
                     for server_id in client.available_servers

@@ -25,7 +25,10 @@ from agents.specialists import (
     PlannerAgent,
     ArbiterAgent,
 )
-from agents.web_agent import WebAgent
+try:
+    from agents.web_agent import WebAgent
+except ImportError:
+    WebAgent = None  # type: ignore[assignment,misc]
 from agents.autonomous_orchestrator import (
     AutonomousOrchestrator,
     get_autonomous_orchestrator,

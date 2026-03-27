@@ -405,42 +405,46 @@ class TestMCPIntegration:
     @patch('core.main.STARK._load_modules')
     async def test_stark_mcp_integration(self, mock_load, mock_mcp_start):
         """Test STARK integration with MCP."""
-        from core.main import STARK
-        
+        from core.main import STARK, reset_stark
+        reset_stark()
+
         # Setup mocks
         mock_mcp_start.return_value = None
-        
+
         with patch('core.constants.MCP_SERVER_ENABLED', True):
             with patch('core.constants.MCP_CLIENT_ENABLED', True):
                 with patch('mcp.get_mcp_manager') as mock_get_mcp:
                     mock_manager = Mock()
                     mock_get_mcp.return_value = mock_manager
-                    
-                    await STARK.start_async()
-                    
+
+                    stark = STARK(lazy_load=True)
+                    await stark.start_async()
+
                     # Should start MCP manager
                     mock_get_mcp.assert_called_once()
-    
+
     @patch('mcp.MCPManager')
     def test_stark_get_mcp_status(self, mock_manager_class):
         """Test getting MCP status from STARK."""
         from core.main import STARK
-        
+
         mock_manager = Mock()
         mock_manager.client.available_servers = {"server1": {}}
         mock_manager.client.list_available_tools.return_value = {"server1": ["tool1"]}
-        STARK._mcp_manager = mock_manager
-        
-        status = STARK.get_mcp_status()
+        stark = STARK(lazy_load=True)
+        stark._mcp_manager = mock_manager
+
+        status = stark.get_mcp_status()
         assert status["enabled"] is True
         assert "servers_connected" in status
-    
+
     def test_stark_get_mcp_status_not_initialized(self):
         """Test getting MCP status when not initialized."""
         from core.main import STARK
-        
-        STARK._mcp_manager = None
-        status = STARK.get_mcp_status()
+
+        stark = STARK(lazy_load=True)
+        stark._mcp_manager = None
+        status = stark.get_mcp_status()
         assert status["enabled"] is False
         assert status["status"] == "not_initialized"
 

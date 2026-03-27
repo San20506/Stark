@@ -57,6 +57,22 @@ from utils.logger import get_logger
 logger = get_logger(__name__)
 
 # =============================================================================
+# MCP SDK RE-EXPORTS (for testability via patching)
+# =============================================================================
+
+try:
+    from mcp.client.stdio import stdio_client, StdioServerParameters  # noqa: F401
+    from mcp.client.session import ClientSession  # noqa: F401
+    from mcp.server.fastmcp import FastMCP  # noqa: F401
+    STDIO_CLIENT_AVAILABLE = True
+except Exception:
+    stdio_client = None  # type: ignore[assignment]
+    StdioServerParameters = None  # type: ignore[assignment]
+    ClientSession = None  # type: ignore[assignment]
+    FastMCP = None  # type: ignore[assignment]
+    STDIO_CLIENT_AVAILABLE = False
+
+# =============================================================================
 # MCP SERVER IMPLEMENTATION
 # =============================================================================
 
@@ -447,29 +463,32 @@ class STARKMCPClient:
         Returns:
             True if connection successful
         """
-        if not MCP_CLIENT_ENABLED:
+        import core.constants as _constants
+        if not _constants.MCP_CLIENT_ENABLED:
             logger.info("MCP client disabled in configuration")
             return False
-            
+
         if len(self.connections) >= self._max_servers:
             logger.warning(f"Maximum MCP servers ({self._max_servers}) reached")
             return False
-            
-        try:
-            from mcp.client.stdio import StdioServerParameters, stdio_client
-            from mcp.client.session import ClientSession
 
-            server_params = StdioServerParameters(
+        try:
+            import mcp as _mcp
+            _stdio_client = _mcp.stdio_client
+            _ClientSession = _mcp.ClientSession
+            _StdioServerParameters = _mcp.StdioServerParameters
+
+            server_params = _StdioServerParameters(
                 command=command,
                 args=args or [],
                 env=env
             )
 
             # Create stdio client connection
-            (read, write) = await stdio_client(server_params).__aenter__()
+            (read, write) = await _stdio_client(server_params).__aenter__()
 
             # Create client session
-            session = ClientSession(read, write)
+            session = _ClientSession(read, write)
             await session.initialize()
             
             # Store connection
@@ -548,8 +567,8 @@ class STARKMCPClient:
             Tool result
         """
         if server_id not in self.connections:
-            return {"error": f"Server '{server_id}' not connected"}
-            
+            return {"error": f"Server '{server_id}' not connected", "success": False}
+
         try:
             session = self.connections[server_id]["session"]
             result = await session.call_tool(tool_name, arguments or {})
@@ -668,8 +687,6 @@ class MCPAgent:
     
     def __init__(self, name: str = "MCPAgent"):
         """Initialize MCP agent."""
-        from agents.base_agent import BaseAgent, AgentType, AgentResult
-        
         self.name = name
         self.client = STARKMCPClient()
         self._initialized = False
@@ -826,11 +843,13 @@ class MCPAgent:
         # Add external tool results
         for result in external_results:
             if result["result"].get("success"):
-                tool_output = "\n".join([
-                    content.get("text", "") 
-                    for content in result["result"].get("content", [])
-                    if content.get("type") == "text"
-                ])
+                parts = []
+                for content in result["result"].get("content", []):
+                    if hasattr(content, "text"):
+                        parts.append(content.text)
+                    elif isinstance(content, dict) and content.get("type") == "text":
+                        parts.append(content.get("text", ""))
+                tool_output = "\n".join(parts)
                 combined.append(f"External Tool ({result['server_id']}.{result['tool_name']}):\n{tool_output}")
         
         return "\n\n".join(combined)
@@ -857,11 +876,12 @@ class MCPManager:
             return
             
         try:
+            import core.constants as _constants
             # Start MCP server in background
-            if MCP_SERVER_ENABLED:
+            if _constants.MCP_SERVER_ENABLED:
                 server_task = asyncio.create_task(self.server.start())
                 logger.info("MCP server started")
-            
+
             # Initialize MCP agent
             await self.agent.initialize()
             

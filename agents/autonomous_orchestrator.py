@@ -19,7 +19,10 @@ from agents.specialists import (
     PlannerAgent,
     ArbiterAgent,
 )
-from agents.web_agent import WebAgent
+try:
+    from agents.web_agent import WebAgent
+except ImportError:
+    WebAgent = None  # type: ignore[assignment,misc]
 from agents.tool_executor import ToolExecutor
 
 logger = logging.getLogger(__name__)
@@ -53,14 +56,15 @@ class AutonomousOrchestrator:
         self.fast_answer = FastAnswerAgent()
         self.planner = PlannerAgent()
         self.arbiter = ArbiterAgent()
-        self.web_agent = WebAgent()
-        
+        self.web_agent = WebAgent() if WebAgent is not None else None
+
         self.orchestrator.register_agent(self.router)
         self.orchestrator.register_agent(self.retriever)
         self.orchestrator.register_agent(self.fast_answer)
         self.orchestrator.register_agent(self.planner)
         self.orchestrator.register_agent(self.arbiter)
-        self.orchestrator.register_agent(self.web_agent)
+        if self.web_agent is not None:
+            self.orchestrator.register_agent(self.web_agent)
         
         logger.info("AutonomousOrchestrator initialized")
     
