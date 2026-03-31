@@ -48,9 +48,10 @@ pytest>=7.4.0
 pytest-cov>=4.1.0
 
 # ==============================================================================
-# OPTIONAL: VECTOR DATABASE (for semantic memory)
+# VECTOR DATABASE + MEDIA MEMORY
 # ==============================================================================
-# chromadb>=0.4.0           # Uncomment if using vector storage
+chromadb>=0.4.0             # Vector store for media memory
+google-genai>=1.0.0         # Gemini Embedding 2 + Flash (media descriptions)
 
 # ==============================================================================
 # OPTIONAL: AUDIO/VOICE (for voice interface)
@@ -58,3 +59,13 @@ pytest-cov>=4.1.0
 # sounddevice>=0.4.6
 # faster-whisper>=1.0.0
 # piper-tts>=1.2.0
+
+# ==============================================================================
+# LIFE OS MODULE
+# ==============================================================================
+APScheduler>=3.10               # Cron scheduling for auto-triggers
+notion-client>=2.2              # Notion API (tasks, weekly summaries)
+google-api-python-client>=2.100 # Google Calendar API
+google-auth-httplib2>=0.2       # Google OAuth transport
+google-auth-oauthlib>=1.2       # Google OAuth flow
+python-frontmatter>=1.1         # YAML frontmatter parsing in context .md files

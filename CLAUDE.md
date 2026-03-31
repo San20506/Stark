@@ -105,3 +105,60 @@ python web_server.py                   # web UI + MCP API
 MEMORY_V2_ENABLED=true python stark_cli.py  # with memory v2
 ruff check .                           # lint
 ```
+
+## Persistent Memory
+
+Session context is maintained across conversations in three rolling files:
+
+**Load inline at startup** (recent decisions, deferred tasks):
+`~/.claude/projects/-home-sandy-Projects-Stark/memory/recent-memory.md`
+
+**Reference by path** (consult when needed):
+- Stable facts & preferences: `~/.claude/projects/-home-sandy-Projects-Stark/memory/long-term-memory.md`
+- Active sprint state & open tasks: `~/.claude/projects/-home-sandy-Projects-Stark/memory/project-memory.md`
+
+Memory is consolidated nightly at 02:00 by the `consolidate-memory` skill.
+Run `/consolidate-memory` to update immediately.
+
+## Media Memory System
+
+All media assets (images, video, audio, documents, files) are logged in `~/media-memory/`
+and indexed in a ChromaDB vector store using Gemini Embedding 2.
+
+**Module:** `~/media-memory/media_memory.py`
+**Skill:** `/media-memory`
+**Requires:** `GEMINI_API_KEY` env var
+
+### Automatic logging rules
+
+**INGEST** automatically when:
+- The user sends or attaches any file/image in the conversation
+- A tool produces a file artifact (screenshot, PDF, CSV, export, etc.)
+- You generate an image, diagram, or document as output
+- The user says "remember this", "save this", or "log this" about a file
+
+```python
+import sys; sys.path.insert(0, str(__import__('pathlib').Path.home() / "media-memory"))
+from media_memory import ingest
+meta = ingest("/path/to/file.png", source="user")  # source: "user" | "generated" | "web"
+```
+
+**SEARCH** automatically when:
+- The user references "that image", "the file I sent", "the diagram from before"
+- Context suggests a prior visual or document might be relevant
+- You're uncertain if an asset exists — search first, then answer
+
+```python
+from media_memory import search
+results = search("architecture diagram", media_type="image", n_results=3)
+# results[i]["stored_path"] — use this to re-attach or reference the file
+```
+
+**CLI shorthand:**
+```bash
+cd ~/media-memory
+python media_memory.py ingest FILE [--source user] [--tags tag1 tag2]
+python media_memory.py search "QUERY" [--type image|video|audio|document] [--since ISO_DATE]
+python media_memory.py list [--type image]
+python media_memory.py stats
+```
