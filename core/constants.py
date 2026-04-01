@@ -277,9 +277,30 @@ MCP_RESOURCE_TYPES: Final[list] = [
 ]
 
 # ==============================================================================
+# LIFE OS MODULE CONFIGURATION
+# ==============================================================================
+
+LIFE_OS_DIR: Final[Path] = PROJECT_ROOT / "modules" / "life_os"
+LIFE_OS_CONTEXT_DIR: Final[Path] = LIFE_OS_DIR / "context"
+LIFE_OS_LOG_DIR: Final[Path] = PROJECT_ROOT / "logs" / "life_os"
+LIFE_OS_MODEL: Final[str] = TASK_MODELS["conversation"]  # llama3.2:3b
+LIFE_OS_MORNING_HOUR: Final[int] = 7
+LIFE_OS_EVENING_HOUR: Final[int] = 21
+LIFE_OS_WEEKLY_HOUR: Final[int] = 10
+LIFE_OS_WEEKLY_DAY: Final[str] = "sun"
+LIFE_OS_CHROMA_COLLECTION: Final[str] = "life_os_context"
+LIFE_OS_EPISODE_TYPES: Final[list] = [
+    "morning_briefing",
+    "evening_review",
+    "weekly_review",
+    "habit_update",
+    "goal_update",
+]
+
+# ==============================================================================
 # VERSION & METADATA
 # ==============================================================================
 
-STARK_VERSION: Final[str] = "0.1.0"
-STARK_CODENAME: Final[str] = "Genesis"
-BUILD_DATE: Final[str] = "2025-12-20"
+STARK_VERSION: Final[str] = "0.2.0"
+STARK_CODENAME: Final[str] = "Neuro-Memory"
+BUILD_DATE: Final[str] = "2026-03-29"

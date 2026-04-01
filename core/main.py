@@ -120,6 +120,18 @@ class STARK:
         self._media_store = None  # MediaMemory (Gemini Embedding 2 + ChromaDB)
         self._ollama_available = False
 
+        # Memory v2 cognitive pipeline modules (lazy loaded)
+        self._appraisal_engine = None  # AppraisalEngine (6D emotion vector)
+        self._knowledge_graph = None  # KnowledgeGraph (A-MEM)
+        self._reflection_loop = None  # ReflectionLoop (async reflection)
+        self._consolidation = None  # ConsolidationJob (background thread)
+        self._thread_state_mgr = None  # ThreadStateManager (session checkpointing)
+        self._diary_store = None  # DiaryStore (append-only episodic log)
+        self._activation_scorer = None  # ActivationScorer (ACT-R retrieval ranking)
+        self._episode_manager = None  # EpisodeManager (EM-LLM segmentation)
+        self._tool_schema_store = None  # ToolSchemaStore (schema CRUD)
+        self._current_session_id: Optional[str] = None
+
         # State
         self._running = False
         self._start_time: Optional[datetime] = None
@@ -284,8 +296,13 @@ class STARK:
                 self._media_store = _mm
                 logger.info("MediaMemory loaded (Gemini Embedding 2 + ChromaDB)")
             except Exception as e:
-                logger.warning(f"MediaMemory unavailable (set GEMINI_API_KEY to enable): {e}")
+                logger.warning(
+                    f"MediaMemory unavailable (set GEMINI_API_KEY to enable): {e}"
+                )
                 self._media_store = None
+
+        if MEMORY_V2_ENABLED:
+            self._load_modules_v2()
 
         self._check_ollama()
 
@@ -304,6 +321,89 @@ class STARK:
             self._ollama_available = False
             logger.warning(f"Ollama not available: {e}")
         return self._ollama_available
+
+    def _load_modules_v2(self) -> None:
+        """Load memory v2 cognitive pipeline modules."""
+        if self._appraisal_engine is None:
+            try:
+                from memory.appraisal_engine import AppraisalEngine
+
+                self._appraisal_engine = AppraisalEngine()
+                logger.info("AppraisalEngine loaded")
+            except Exception as e:
+                logger.warning(f"Failed to load AppraisalEngine: {e}")
+
+        if self._thread_state_mgr is None:
+            try:
+                from memory.thread_state import get_thread_state_manager
+
+                self._thread_state_mgr = get_thread_state_manager()
+                logger.info("ThreadStateManager loaded")
+            except Exception as e:
+                logger.warning(f"Failed to load ThreadStateManager: {e}")
+
+        if self._diary_store is None:
+            try:
+                from memory.diary_store import get_diary_store
+
+                self._diary_store = get_diary_store()
+                logger.info("DiaryStore loaded")
+            except Exception as e:
+                logger.warning(f"Failed to load DiaryStore: {e}")
+
+        if self._activation_scorer is None:
+            try:
+                from memory.activation_scorer import ActivationScorer
+
+                self._activation_scorer = ActivationScorer()
+                logger.info("ActivationScorer loaded")
+            except Exception as e:
+                logger.warning(f"Failed to load ActivationScorer: {e}")
+
+        if self._episode_manager is None:
+            try:
+                from memory.episode_manager import EpisodeManager
+
+                self._episode_manager = EpisodeManager()
+                logger.info("EpisodeManager loaded")
+            except Exception as e:
+                logger.warning(f"Failed to load EpisodeManager: {e}")
+
+        if self._knowledge_graph is None:
+            try:
+                from memory.knowledge_graph import KnowledgeGraph
+
+                self._knowledge_graph = KnowledgeGraph()
+                logger.info("KnowledgeGraph loaded")
+            except Exception as e:
+                logger.warning(f"Failed to load KnowledgeGraph: {e}")
+
+        if self._tool_schema_store is None:
+            try:
+                from memory.tool_schema_store import ToolSchemaStore
+
+                self._tool_schema_store = ToolSchemaStore()
+                logger.info("ToolSchemaStore loaded")
+            except Exception as e:
+                logger.warning(f"Failed to load ToolSchemaStore: {e}")
+
+        if self._reflection_loop is None:
+            try:
+                from memory.reflection_loop import ReflectionLoop
+
+                self._reflection_loop = ReflectionLoop()
+                logger.info("ReflectionLoop loaded")
+            except Exception as e:
+                logger.warning(f"Failed to load ReflectionLoop: {e}")
+
+        if self._consolidation is None:
+            try:
+                from memory.consolidation import ConsolidationJob
+
+                self._consolidation = ConsolidationJob()
+                logger.info("ConsolidationJob loaded")
+            except Exception as e:
+                logger.warning(f"Failed to load ConsolidationJob: {e}")
 
     # =========================================================================
     # PREDICTION
@@ -351,6 +451,14 @@ class STARK:
             detection = self._task_detector.detect(query)
             task = detection.task
             confidence = detection.confidence
+
+            # Step 1.5: Memory v2 pipeline (appraisal + episode + scored recall)
+            v2_context = ""
+            if MEMORY_V2_ENABLED and self._thread_state_mgr is not None:
+                try:
+                    v2_context = self._run_v2_pipeline(query, task, confidence)
+                except Exception as e:
+                    logger.warning(f"Memory v2 pipeline failed: {e}")
 
             # Step 1.5: Adaptive routing for low-confidence queries
             if detection.is_emergent or confidence < 0.6:
@@ -429,9 +537,10 @@ class STARK:
                     logger.warning(f"Memory recall failed: {e}")
 
             # Step 3: Generate response
-            response = self._generate_response(query, task, relevant_memories)
+            context = v2_context if v2_context else ""
+            response = self._generate_response(query, task, relevant_memories, context)
 
-            # Step 4: Store experience
+            # Step 4: Store experience + update v2 state
             memory_stored = False
             if MEMORY_V2_ENABLED and self._memory is not None and response:
                 try:
@@ -439,6 +548,13 @@ class STARK:
                     memory_stored = True
                 except Exception as e:
                     logger.warning(f"Memory store failed: {e}")
+
+            # Step 4.5: Update thread state + episode segmentation
+            if MEMORY_V2_ENABLED and self._thread_state_mgr is not None and response:
+                try:
+                    self._update_v2_state(query, response, confidence)
+                except Exception as e:
+                    logger.warning(f"Memory v2 state update failed: {e}")
 
             latency_ms = (time.perf_counter() - start_time) * 1000
 
@@ -521,10 +637,11 @@ class STARK:
             logger.error(f"Streaming failed: {e}")
             yield f"[Error: {e}]"
 
-    def _generate_response(self, query: str, task: str, relevant_memories: List) -> str:
+    def _generate_response(
+        self, query: str, task: str, relevant_memories: List, context: str = ""
+    ) -> str:
         """Generate response using Ollama with task-based model routing."""
-        context = ""
-        if relevant_memories:
+        if not context and relevant_memories:
             context = "\n".join(
                 [
                     f"- {m[0].query}: {m[0].response[:100]}..."
@@ -563,6 +680,118 @@ class STARK:
         if context:
             return f"{system}\n\nContext:\n{context}\n\nUser: {query}\n\nAssistant:"
         return f"{system}\n\nUser: {query}\n\nAssistant:"
+
+    def _run_v2_pipeline(self, query: str, task: str, confidence: float) -> str:
+        """Run the 7-step memory v2 pipeline and return assembled LLM context."""
+        session = self._thread_state_mgr.get_or_create_session(self._current_session_id)
+        self._current_session_id = session.session_id
+
+        appraisal = self._appraisal_engine.compute(
+            query, session.messages, {"task_confidence": confidence}
+        )
+        emotion_vector = list(appraisal.values())
+
+        if self._episode_manager.should_segment(confidence):
+            episode = self._episode_manager.create_episode_from_session(session)
+            self._episode_manager.commit_episode(episode)
+
+        scored_candidates = []
+        if self._diary_store is not None:
+            diary_records = self._diary_store.query_semantic(
+                query, top_k=20, query_emotion_vector=emotion_vector
+            )
+            scored_candidates = diary_records
+
+        graph_results = []
+        if self._knowledge_graph is not None:
+            import numpy as np
+            from memory.appraisal_engine import _hash_embedding
+
+            query_embedding = _hash_embedding(query)
+            graph_results = self._knowledge_graph.query_associative(
+                query_embedding, top_k=5
+            )
+
+        return self._build_v2_context(
+            appraisal, scored_candidates[:5], graph_results, session.messages[-4:]
+        )
+
+    def _update_v2_state(self, query: str, response: str, confidence: float) -> None:
+        """Update thread state and episode segmentation after response."""
+        if self._thread_state_mgr is None or self._current_session_id is None:
+            return
+
+        appraisal = (
+            self._appraisal_engine.compute(query) if self._appraisal_engine else {}
+        )
+        emotion_vector = list(appraisal.values()) if appraisal else []
+
+        if self._episode_manager and self._episode_manager.should_segment(confidence):
+            session = self._thread_state_mgr.load_session(self._current_session_id)
+            episode = self._episode_manager.create_episode_from_session(session)
+            episode_id = self._episode_manager.commit_episode(episode)
+            self._thread_state_mgr.update(
+                self._current_session_id,
+                query,
+                response,
+                emotion_vector=emotion_vector,
+                episode_boundary=episode_id,
+            )
+        else:
+            self._thread_state_mgr.update(
+                self._current_session_id,
+                query,
+                response,
+                emotion_vector=emotion_vector,
+            )
+
+        if (
+            self._reflection_loop is not None
+            and self._thread_state_mgr.is_conversation_ended(self._current_session_id)
+        ):
+            session = self._thread_state_mgr.load_session(self._current_session_id)
+            self._reflection_loop.trigger(session)
+
+    def _build_v2_context(
+        self,
+        appraisal: Dict[str, float],
+        diary_records: list,
+        graph_results: list,
+        recent_messages: list,
+    ) -> str:
+        """Assemble LLM context from memory v2 sources."""
+        parts = []
+
+        if diary_records:
+            diary_lines = []
+            for record in diary_records:
+                tags_str = ", ".join(record.tags[:3]) if record.tags else ""
+                suffix = f" [tags: {tags_str}]" if tags_str else ""
+                diary_lines.append(f"- {record.content[:200]}{suffix}")
+            parts.append("Relevant memories:\n" + "\n".join(diary_lines))
+
+        if graph_results:
+            graph_lines = []
+            for node_id, sim in graph_results[:3]:
+                node = (
+                    self._knowledge_graph._nodes.get(node_id)
+                    if self._knowledge_graph
+                    else None
+                )
+                if node:
+                    graph_lines.append(f"- {node.content[:200]} (sim={sim:.2f})")
+            if graph_lines:
+                parts.append("Related concepts:\n" + "\n".join(graph_lines))
+
+        if recent_messages:
+            msg_lines = []
+            for msg in recent_messages:
+                role = msg.get("role", "user")
+                content = msg.get("content", "")[:150]
+                msg_lines.append(f"{role}: {content}")
+            parts.append("Recent conversation:\n" + "\n".join(msg_lines))
+
+        return "\n\n".join(parts) if parts else ""
 
     # =========================================================================
     # STATUS & MONITORING
@@ -940,7 +1169,9 @@ class STARK:
             stark_result["mcp_error"] = str(e)
             return stark_result
 
-    def process_query(self, query: str, task_type_hint: Optional[str] = None) -> Dict[str, Any]:
+    def process_query(
+        self, query: str, task_type_hint: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Process a query and return a dict result. Delegates to predict().
 

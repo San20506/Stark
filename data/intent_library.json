@@ -185,5 +185,45 @@
     "close this",
     "close the app",
     "shut down"
+  ],
+  "morning_briefing": [
+    "morning briefing",
+    "start my day",
+    "what's today",
+    "daily plan",
+    "give me my briefing",
+    "what do I need to do today",
+    "morning update",
+    "what's on today"
+  ],
+  "evening_review": [
+    "evening review",
+    "end of day",
+    "daily review",
+    "how was today",
+    "day review",
+    "run evening review",
+    "let's do the evening review",
+    "I'm done for the day"
+  ],
+  "weekly_review": [
+    "weekly review",
+    "week summary",
+    "goal check",
+    "how did I do this week",
+    "run weekly review",
+    "weekly audit",
+    "how was my week"
+  ],
+  "update_habit": [
+    "I did",
+    "mark habit",
+    "log habit",
+    "streak update",
+    "I completed",
+    "I finished my",
+    "habit done",
+    "I trained",
+    "I practiced"
   ]
 }

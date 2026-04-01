@@ -38,5 +38,47 @@
     "created_at": "2025-12-18T17:26:41.385971",
     "last_run": null,
     "next_run": null
+  },
+  "life_os_morning": {
+    "task_id": "life_os_morning",
+    "handler": "modules.life_os.scheduler.run_morning",
+    "trigger_type": "cron",
+    "trigger_config": {
+      "hour": 7,
+      "minute": 0,
+      "day_of_week": null
+    },
+    "enabled": true,
+    "created_at": "2026-03-29T00:00:00.000000",
+    "last_run": null,
+    "next_run": null
+  },
+  "life_os_evening": {
+    "task_id": "life_os_evening",
+    "handler": "modules.life_os.scheduler.run_evening",
+    "trigger_type": "cron",
+    "trigger_config": {
+      "hour": 21,
+      "minute": 0,
+      "day_of_week": null
+    },
+    "enabled": true,
+    "created_at": "2026-03-29T00:00:00.000000",
+    "last_run": null,
+    "next_run": null
+  },
+  "life_os_weekly": {
+    "task_id": "life_os_weekly",
+    "handler": "modules.life_os.scheduler.run_weekly",
+    "trigger_type": "cron",
+    "trigger_config": {
+      "hour": 10,
+      "minute": 0,
+      "day_of_week": "sun"
+    },
+    "enabled": true,
+    "created_at": "2026-03-29T00:00:00.000000",
+    "last_run": null,
+    "next_run": null
   }
 }
