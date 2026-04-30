@@ -1,0 +1,33 @@
+{
+  "nodes": [
+    {"id": "project", "type": "text", "text": "# STARK v0.2.0\nSelf-Training Adaptive\nReasoning Kernel", "x": -150, "y": -100, "width": 300, "height": 80, "color": "1"},
+    {"id": "core", "type": "text", "text": "## Core\nconstants / config\ntask_detector (TF-IDF)\nadaptive_router\norchestrator", "x": -750, "y": 80, "width": 200, "height": 90},
+    {"id": "inference", "type": "text", "text": "## Inference\nOllama backend\nstark_base\ninference_engine\n<50ms target", "x": -500, "y": 80, "width": 200, "height": 90},
+    {"id": "memory", "type": "text", "text": "## Memory v0.2.0\nAppraisal Engine\nEpisode Manager\nACT-R Scorer\nKnowledge Graph\nDiary Store", "x": -250, "y": 80, "width": 200, "height": 110},
+    {"id": "learning", "type": "text", "text": "## Learning\nLoRA adapters\nContinual Learner\nBackground training\nReplay buffer", "x": 0, "y": 80, "width": 200, "height": 90},
+    {"id": "capabilities", "type": "text", "text": "## Capabilities\nNLP interface\nCode assistant\nReasoning (CoT)\nTask detector", "x": 250, "y": 80, "width": 200, "height": 90},
+    {"id": "mcp", "type": "text", "text": "## MCP Layer\nMCP Server\nMCP Client\nExternal tools", "x": 500, "y": 80, "width": 180, "height": 80},
+    {"id": "adr_ollama", "type": "file", "file": "ADR/Ollama.md", "x": -600, "y": 260, "width": 160, "height": 50},
+    {"id": "adr_lora", "type": "file", "file": "ADR/LoRA.md", "x": -420, "y": 260, "width": 160, "height": 50},
+    {"id": "adr_sqlite", "type": "file", "file": "ADR/SQLite.md", "x": -240, "y": 260, "width": 160, "height": 50},
+    {"id": "adr_networkx", "type": "file", "file": "ADR/NetworkX.md", "x": -60, "y": 260, "width": 160, "height": 50},
+    {"id": "adr_glove", "type": "file", "file": "ADR/GloVe.md", "x": 120, "y": 260, "width": 160, "height": 50},
+    {"id": "adr_mcp", "type": "file", "file": "ADR/MCP.md", "x": 300, "y": 260, "width": 160, "height": 50}
+  ],
+  "edges": [
+    {"id": "e1", "fromNode": "project", "toNode": "core", "label": "orchestrates"},
+    {"id": "e2", "fromNode": "project", "toNode": "inference", "label": "queries"},
+    {"id": "e3", "fromNode": "project", "toNode": "memory", "label": "MEMORY_V2 flag"},
+    {"id": "e4", "fromNode": "project", "toNode": "learning", "label": "background"},
+    {"id": "e5", "fromNode": "project", "toNode": "capabilities", "label": "routes to"},
+    {"id": "e6", "fromNode": "project", "toNode": "mcp", "label": "integrates"},
+    {"id": "e7", "fromNode": "core", "toNode": "inference", "label": "routes queries"},
+    {"id": "e8", "fromNode": "memory", "toNode": "learning", "label": "experiences"},
+    {"id": "e9", "fromNode": "inference", "toNode": "adr_ollama", "label": "uses"},
+    {"id": "e10", "fromNode": "learning", "toNode": "adr_lora", "label": "uses"},
+    {"id": "e11", "fromNode": "memory", "toNode": "adr_sqlite", "label": "uses"},
+    {"id": "e12", "fromNode": "memory", "toNode": "adr_networkx", "label": "knowledge graph"},
+    {"id": "e13", "fromNode": "core", "toNode": "adr_glove", "label": "embeddings"},
+    {"id": "e14", "fromNode": "mcp", "toNode": "adr_mcp", "label": "uses"}
+  ]
+}
