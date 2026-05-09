@@ -27,23 +27,29 @@ ADAPTERS_DIR: Final[Path] = MODELS_DIR / "adapters"
 
 # Ollama Model Settings
 OLLAMA_BASE_URL: Final[str] = "http://127.0.0.1:11434"  # Ollama API endpoint
-OLLAMA_DEFAULT_MODEL: Final[str] = "stark-fast"  # Default model for simple tasks
+OLLAMA_DEFAULT_MODEL: Final[str] = "fast:latest"  # qwen3:8b Q4_K_M, temp=0.2, tools+thinking
 
-# Task-to-Model Routing (multi-model orchestration)
-# STARK uses different specialized models for different tasks
+# Task-to-Model Routing
+# fast:latest     = qwen3:8b Q4_K_M alias (8192ctx, thinking+tools, temp=0.2) — fast reasoning
+# coder:latest    = qwen3-coder MoE wrapper (256K ctx, agentic code, SWE-bench 44.3%)
+# phi3:mini       = 3.8B, ~2.3GB, fastest response, for pure conversation
+# llama3.1:8b-instruct-q5_K_M = 128K ctx, strong instruction following, research/broad knowledge
+# gemma4:e4b      = multimodal (text+image+audio), 128K ctx, use only when input has media
+# nomic-embed-text = embeddings ONLY — never route completions here
 TASK_MODELS: Final[dict] = {
-    # Fast model for simple interactions (llama3.2:3b - 2B params, instant)
-    "conversation": "llama3.2:3b",
-    "greeting": "llama3.2:3b",
-    "general": "llama3.2:3b",
-    # Reasoning model for complex tasks (qwen3:4b - thinking capability)
-    "error_debugging": "qwen3:4b",
-    "code_explanation": "qwen3:4b",
-    "code_generation": "qwen3:4b",
-    "code_review": "qwen3:4b",
-    # Default fallback
-    "default": "llama3.2:3b",
+    "conversation": "phi3:mini",
+    "greeting":     "phi3:mini",
+    "general":      "fast:latest",
+    "code_explanation": "fast:latest",
+    "code_review":      "fast:latest",
+    "error_debugging":  "coder:latest",
+    "code_generation":  "coder:latest",
+    "research":         "llama3.1:8b-instruct-q5_K_M",
+    "multimodal":       "gemma4:e4b",
+    "default":          "fast:latest",
 }
+
+EMBED_MODEL: Final[str] = "nomic-embed-text"
 
 # Inference Settings
 MAX_LENGTH: Final[int] = 2048
@@ -136,7 +142,7 @@ AMEM_PROMOTION_SESSION_MIN: Final[int] = 3
 DIARY_MAX_ENTRIES_SOFT_CAP: Final[int] = 50_000
 
 REFLECTION_TRIGGER_DELAY_SEC: Final[int] = 30
-REFLECTION_MODEL_NAME: Final[str] = "qwen2.5:3b"
+REFLECTION_MODEL_NAME: Final[str] = "fast:latest"
 
 CONSOLIDATION_CONFLICT_THRESH: Final[int] = 10
 CONSOLIDATION_SCHEDULE: Final[str] = "02:00"
@@ -283,7 +289,7 @@ MCP_RESOURCE_TYPES: Final[list] = [
 LIFE_OS_DIR: Final[Path] = PROJECT_ROOT / "modules" / "life_os"
 LIFE_OS_CONTEXT_DIR: Final[Path] = LIFE_OS_DIR / "context"
 LIFE_OS_LOG_DIR: Final[Path] = PROJECT_ROOT / "logs" / "life_os"
-LIFE_OS_MODEL: Final[str] = TASK_MODELS["conversation"]  # llama3.2:3b
+LIFE_OS_MODEL: Final[str] = TASK_MODELS["conversation"]  
 LIFE_OS_MORNING_HOUR: Final[int] = 7
 LIFE_OS_EVENING_HOUR: Final[int] = 21
 LIFE_OS_WEEKLY_HOUR: Final[int] = 10
@@ -301,6 +307,35 @@ LIFE_OS_EPISODE_TYPES: Final[list] = [
 # VERSION & METADATA
 # ==============================================================================
 
-STARK_VERSION: Final[str] = "0.2.0"
-STARK_CODENAME: Final[str] = "Neuro-Memory"
-BUILD_DATE: Final[str] = "2026-03-29"
+STARK_VERSION: Final[str] = "0.3.0"
+STARK_CODENAME: Final[str] = "Ubiquity"
+BUILD_DATE: Final[str] = "2026-05-09"
+
+# ==============================================================================
+# HERMES BRIDGE
+# ==============================================================================
+
+HERMES_ENABLED: Final[bool] = False
+HERMES_POLL_TIMEOUT_SEC: Final[int] = 25
+# Mention-gate: which local model classifies "addressed to bot" vs incidental
+HERMES_MENTION_GATE_MODEL: Final[str] = "fast:latest"
+HERMES_MENTION_GATE_THRESHOLD: Final[float] = 0.6
+# Proactive outbound: appraisal thresholds that trigger an unprompted push
+HERMES_PROACTIVE_GOAL_THRESHOLD: Final[float] = 0.7
+HERMES_PROACTIVE_NOVELTY_THRESHOLD: Final[float] = 0.65
+# Minimum seconds between proactive outbound sends (anti-spam)
+HERMES_PROACTIVE_COOLDOWN_SEC: Final[int] = 1800
+HERMES_REPLY_TIMEOUT_SEC: Final[int] = 30
+HERMES_MAX_REPLY_TOKENS: Final[int] = 800
+# Default off; user enables per-thread via /voice on
+HERMES_VOICE_REPLY_DEFAULT: Final[bool] = False
+# Conversation IDs that receive proactive pushes (empty = disabled)
+HERMES_PROACTIVE_CHANNELS: Final[tuple] = ()
+# Only these platform user IDs may execute tool/slash commands
+HERMES_TRUSTED_USER_IDS: Final[tuple] = ()
+# Max inbound events to process per poll cycle
+HERMES_MAX_EVENTS_PER_CYCLE: Final[int] = 10
+# Reconnect backoff: seconds, doubles each retry up to this cap
+HERMES_RECONNECT_BACKOFF_MAX_SEC: Final[int] = 300
+# Rate limit: max concurrent replies per conversation_id
+HERMES_REPLY_CONCURRENCY_PER_CHANNEL: Final[int] = 1

@@ -52,7 +52,42 @@ class ReflectionLoop:
         result = self._summarize_via_llm(conversation_text)
         with self._lock:
             self._last_result = result
+        self._notify_proactive_dispatcher(result)
         return result
+
+    def _notify_proactive_dispatcher(self, result: ReflectionResult) -> None:
+        """Fire proactive Hermes push if HERMES_ENABLED and thresholds met (async, non-blocking)."""
+        from core.constants import HERMES_ENABLED
+        if not HERMES_ENABLED:
+            return
+        try:
+            import asyncio
+            from memory.proactive_dispatcher import ProactiveDispatcher
+
+            diary_entry = {
+                "insights": result.insights,
+                "summary": result.summary,
+                "emotion_vector": {},  # filled by appraisal engine when MEMORY_V2_ENABLED
+                "tags": [],
+            }
+
+            def _dispatch() -> None:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    # ProactiveDispatcher needs a hermes client; import lazily to avoid circular deps
+                    from core.main import get_stark
+                    stark = get_stark()
+                    if hasattr(stark, "_hermes_dispatcher") and stark._hermes_dispatcher is not None:
+                        loop.run_until_complete(
+                            stark._hermes_dispatcher.on_reflection_complete(diary_entry)
+                        )
+                finally:
+                    loop.close()
+
+            threading.Thread(target=_dispatch, daemon=True).start()
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("Proactive dispatcher notify failed (non-critical): %s", exc)
 
     def _build_conversation_text(self, session_state: SessionState) -> str:
         lines: List[str] = []

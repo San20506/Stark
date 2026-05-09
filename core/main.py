@@ -23,6 +23,7 @@ from core.constants import (
     MCP_SERVER_ENABLED,
     MCP_CLIENT_ENABLED,
     MEMORY_V2_ENABLED,
+    HERMES_ENABLED,
 )
 from core.config import get_config, STARKConfig
 from core.task_detector import get_detector, TaskDetector
@@ -117,6 +118,7 @@ class STARK:
         self._learner = None  # ContinualLearner
         self._notifier = None  # NotificationManager
         self._mcp_manager = None  # MCPManager
+        self._hermes_dispatcher = None  # ProactiveDispatcher
         self._media_store = None  # MediaMemory (Gemini Embedding 2 + ChromaDB)
         self._ollama_available = False
 
@@ -172,6 +174,57 @@ class STARK:
                     logger.info("MCP Manager started")
                 except Exception as e:
                     logger.warning(f"Failed to start MCP Manager: {e}")
+
+            # Start Hermes bridge if enabled
+            if HERMES_ENABLED:
+                try:
+                    import asyncio as _asyncio
+                    from agents.hermes_agent import HermesAgent
+                    from agents.mention_gate import MentionGate
+                    from agents.hermes_commands import HermesCommandRouter
+
+                    class _HermesMCPClient:
+                        """Thin async wrapper around the Hermes MCP tools."""
+                        async def events_wait(self, timeout: int = 25) -> list:
+                            import mcp
+                            return await mcp.call("mcp__hermes__events_wait", {"timeout": timeout})
+
+                        async def messages_send(self, conversation_id: str, text: str) -> None:
+                            import mcp
+                            await mcp.call("mcp__hermes__messages_send", {
+                                "conversation_id": conversation_id, "content": text
+                            })
+
+                        async def attachments_fetch(self, attachment_id: str) -> bytes:
+                            import mcp
+                            return await mcp.call("mcp__hermes__attachments_fetch", {
+                                "attachment_id": attachment_id
+                            })
+
+                    hermes_client = _HermesMCPClient()
+                    mention_gate = MentionGate(ollama_client=None)
+                    command_router = HermesCommandRouter(stark=self)
+                    hermes_agent = HermesAgent(
+                        stark=self,
+                        hermes_client=hermes_client,
+                        mention_gate=mention_gate,
+                        command_router=command_router,
+                    )
+
+                    from memory.proactive_dispatcher import ProactiveDispatcher
+                    self._hermes_dispatcher = ProactiveDispatcher(hermes_client=hermes_client)
+
+                    def _run_hermes_loop() -> None:
+                        loop = _asyncio.new_event_loop()
+                        _asyncio.set_event_loop(loop)
+                        loop.run_until_complete(hermes_agent.run())
+                        loop.close()
+
+                    hermes_thread = threading.Thread(target=_run_hermes_loop, daemon=True)
+                    hermes_thread.start()
+                    logger.info("Hermes bridge started in background thread")
+                except Exception as e:
+                    logger.warning("Failed to start Hermes bridge: %s", e)
 
             self._running = True
             self._start_time = datetime.now()
@@ -444,6 +497,16 @@ class STARK:
                         latency_ms=(time.perf_counter() - start_time) * 1000,
                         memory_stored=False,
                     )
+            except PermissionError as e:
+                logger.warning(f"Action blocked by validator: {e}")
+                return PredictionResult(
+                    response=str(e),
+                    task="action_blocked",
+                    confidence=1.0,
+                    latency_ms=(time.perf_counter() - start_time) * 1000,
+                    memory_stored=False,
+                    error=str(e),
+                )
             except Exception as e:
                 logger.debug(f"Action executor not available: {e}")
 
