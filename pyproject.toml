@@ -30,6 +30,7 @@ dependencies = [
 dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
+    "pygments>=2.18.0", # pytest terminal highlighting (explicit pin; transitive via pytest)
     "ruff>=0.16.0",
     "mypy>=1.17.0",
     "bandit>=1.9.0",

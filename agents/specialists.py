@@ -16,6 +16,7 @@ from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 
 from agents.base_agent import BaseAgent, AgentResult, AgentType
+from core.constants import TASK_MODELS
 
 logger = logging.getLogger(__name__)
 
@@ -123,8 +124,8 @@ class FastAnswerAgent(BaseAgent):
             description="Quick Q&A using fast model",
             timeout=10.0,  # Fast responses only
         )
-        
-        self._model = "llama3.2:3b"
+
+        self._model = TASK_MODELS["general"]
     
     def execute(self, task: str, context: Dict[str, Any] = None) -> AgentResult:
         """
@@ -139,11 +140,11 @@ class FastAnswerAgent(BaseAgent):
         """
         context = context or {}
         steps = []
-        
+
+        import requests
+        from core.constants import OLLAMA_BASE_URL
+
         try:
-            import requests
-            from core.constants import OLLAMA_BASE_URL
-            
             steps.append(f"Generating answer with {self._model}")
             
             # Build prompt with context
@@ -192,7 +193,23 @@ class FastAnswerAgent(BaseAgent):
                 }),
                 steps_taken=steps,
             )
-            
+
+        except requests.exceptions.RequestException as e:
+            # R4: degrade gracefully when Ollama is unreachable (offline/test env).
+            # TODO: move fallback confidence to core/constants.py (owned outside this change).
+            logger.warning(f"FastAnswerAgent Ollama unavailable, degraded fallback: {e}")
+            steps.append("Ollama unavailable, using degraded fallback")
+            return AgentResult(
+                success=True,
+                output=json.dumps({
+                    "answer": f"Language model unavailable, query received: {task}",
+                    "confidence": 0.0,
+                    "model": self._model,
+                    "degraded": True,
+                }),
+                steps_taken=steps,
+            )
+
         except Exception as e:
             logger.error(f"FastAnswerAgent error: {e}", exc_info=True)
             return AgentResult(
@@ -222,8 +239,8 @@ class PlannerAgent(BaseAgent):
             description="Task decomposition and planning",
             timeout=30.0,
         )
-        
-        self._model = "qwen3:4b"  # Thinking model
+
+        self._model = TASK_MODELS["code_generation"]  # Thinking model
     
     def execute(self, task: str, context: Dict[str, Any] = None) -> AgentResult:
         """
@@ -238,11 +255,11 @@ class PlannerAgent(BaseAgent):
         """
         context = context or {}
         steps = []
-        
+
+        import requests
+        from core.constants import OLLAMA_BASE_URL
+
         try:
-            import requests
-            from core.constants import OLLAMA_BASE_URL
-            
             steps.append(f"Planning with {self._model}")
             
             # Build planning prompt
@@ -298,7 +315,24 @@ Output ONLY valid JSON."""
                 output=json.dumps(plan, indent=2),
                 steps_taken=steps,
             )
-            
+
+        except requests.exceptions.RequestException as e:
+            # R4: degrade gracefully when Ollama is unreachable (offline/test env).
+            logger.warning(f"PlannerAgent Ollama unavailable, degraded fallback: {e}")
+            steps.append("Ollama unavailable, using degraded fallback plan")
+            plan = {
+                "steps": [f"Analyze request: {task}", "Execute plan", "Return result"],
+                "requires_tools": [],
+                "complexity": "moderate",
+                "degraded": True,
+            }
+            steps.append(f"Created fallback plan with {len(plan['steps'])} steps")
+            return AgentResult(
+                success=True,
+                output=json.dumps(plan, indent=2),
+                steps_taken=steps,
+            )
+
         except Exception as e:
             logger.error(f"PlannerAgent error: {e}", exc_info=True)
             return AgentResult(

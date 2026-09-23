@@ -89,6 +89,7 @@ class AutonomousOrchestrator:
             if not routing_result.success:
                 return {
                     "response": "Routing failed",
+                    "source": "unknown",
                     "error": routing_result.error,
                     "latency_ms": (time.time() - start_time) * 1000,
                 }
@@ -115,6 +116,7 @@ class AutonomousOrchestrator:
             if len(candidates) == 0:
                 return {
                     "response": "No response generated",
+                    "source": "unknown",
                     "error": "All paths failed",
                     "latency_ms": (time.time() - start_time) * 1000,
                 }
@@ -144,6 +146,7 @@ class AutonomousOrchestrator:
             logger.error(f"Autonomous prediction failed: {e}", exc_info=True)
             return {
                 "response": "An error occurred",
+                "source": "unknown",
                 "error": str(e),
                 "latency_ms": (time.time() - start_time) * 1000,
             }

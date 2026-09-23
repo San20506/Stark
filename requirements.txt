@@ -51,6 +51,7 @@ asyncio-mqtt>=0.16.0       # For async MCP communication (optional)
 # ==============================================================================
 pytest>=7.4.0,<9.0
 pytest-cov>=4.1.0,<7.0
+pygments>=2.18.0 # pytest terminal highlighting (explicit pin; transitive via pytest)
 
 # ==============================================================================
 # VECTOR DATABASE + MEDIA MEMORY
