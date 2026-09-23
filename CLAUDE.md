@@ -104,8 +104,8 @@ python run_voice.py                    # voice mode
 python web_server.py                   # web UI + MCP API
 MEMORY_V2_ENABLED=true python stark_cli.py  # with memory v2
 ruff check .                           # lint
-make check                             # lint + format + security
-make test                              # tests with coverage
+just check                             # lint + format + security
+just test                              # tests with coverage
 ```
 
 ## Token Optimization (Adapted from Minimize-Cursor-Cost)
