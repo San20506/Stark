@@ -19,6 +19,7 @@ from agents.autonomous_orchestrator import (
     get_autonomous_orchestrator,
     reset_autonomous_orchestrator,
 )
+from core.constants import TASK_MODELS
 
 
 class TestRouterAgent:
@@ -70,7 +71,7 @@ class TestSpecialistAgents:
         data = json.loads(result.output)
         assert "answer" in data
         assert "confidence" in data
-        assert data["model"] == "llama3.2:3b"
+        assert data["model"] == TASK_MODELS["general"]
     
     def test_planner_agent(self):
         """Test PlannerAgent."""
@@ -143,6 +144,9 @@ class TestAutonomousOrchestrator:
     def test_predict_fast_path(self):
         """Test prediction using fast path."""
         orchestrator = get_autonomous_orchestrator()
+        # Warm up: load the fast model into VRAM so the timed call below
+        # measures steady-state latency (R3), not cold model load.
+        orchestrator.predict("warm up")
         result = orchestrator.predict("hello there")
         
         assert "response" in result

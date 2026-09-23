@@ -18,6 +18,7 @@ import requests
 
 from agents.base_agent import BaseAgent, AgentResult, AgentType
 from agents.code_executor import get_code_executor, ExecutionResult
+from core.constants import TASK_MODELS
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ class CodeAgent(BaseAgent):
     """
     Code generation agent with testing and auto-fixing.
     
-    Uses thinking model (qwen3:4b) for intelligent code generation.
+    Uses reasoning model (TASK_MODELS["code_generation"]) for code generation.
     """
     
     def __init__(
@@ -48,7 +49,7 @@ class CodeAgent(BaseAgent):
             timeout=60.0,  # Allow time for multiple iterations
         )
         
-        self.model = "qwen3:4b"  # Thinking model for code
+        self.model = TASK_MODELS["code_generation"]  # Reasoning model for code
         self.max_fix_attempts = max_fix_attempts
         self.executor = get_code_executor()
     

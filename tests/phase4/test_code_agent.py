@@ -9,6 +9,7 @@ import json
 
 from agents.code_agent import CodeAgent, get_code_agent
 from agents.code_executor import CodeExecutor, get_code_executor
+from core.constants import TASK_MODELS
 
 
 class TestCodeExecutor:
@@ -105,7 +106,7 @@ class TestCodeAgent:
         """Test agent initialization."""
         agent = CodeAgent()
         assert agent.name == "CodeAgent"
-        assert agent.model == "qwen3:4b"
+        assert agent.model == TASK_MODELS["code_generation"]
         assert agent.max_fix_attempts == 3
     
     def test_simple_generation(self):

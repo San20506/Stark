@@ -37,6 +37,7 @@ from core.constants import (
     GC_BATCH_SIZE,
     PROJECT_ROOT,
     MEMORY_V2_ENABLED,
+    EMBEDDING_MODEL_NAME,
 )
 
 logger = logging.getLogger(__name__)
@@ -59,7 +60,7 @@ class NeuromorphicMemory:
 
     def __init__(
         self,
-        model_name: str = "all-MiniLM-L6-v2",
+        model_name: str = EMBEDDING_MODEL_NAME,
         persist_path: Optional[Path] = None,
         lazy_load: bool = True,
     ):

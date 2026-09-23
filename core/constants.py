@@ -32,18 +32,28 @@ OLLAMA_DEFAULT_MODEL: Final[str] = "stark-fast"  # Default model for simple task
 # Task-to-Model Routing (multi-model orchestration)
 # STARK uses different specialized models for different tasks
 TASK_MODELS: Final[dict] = {
-    # Fast model for simple interactions (llama3.2:3b - 2B params, instant)
-    "conversation": "llama3.2:3b",
-    "greeting": "llama3.2:3b",
-    "general": "llama3.2:3b",
-    # Reasoning model for complex tasks (qwen3:4b - thinking capability)
-    "error_debugging": "qwen3:4b",
-    "code_explanation": "qwen3:4b",
-    "code_generation": "qwen3:4b",
-    "code_review": "qwen3:4b",
+    # Conversational slot (gemma3:4b - knowledge + multilingual + fluidity)
+    "conversation": "gemma3:4b",
+    "greeting": "gemma3:4b",
+    "general": "gemma3:4b",
+    # Reasoning/code slot (qwen3:8b - premier coding in this tier)
+    "error_debugging": "qwen3:8b",
+    "code_explanation": "qwen3:8b",
+    "code_generation": "qwen3:8b",
+    "code_review": "qwen3:8b",
     # Default fallback
-    "default": "llama3.2:3b",
+    "default": "gemma3:4b",
 }
+
+# Routing decisions (gemma3n:e4b - on-device optimized, fast JSON logic)
+ROUTER_MODEL_NAME: Final[str] = "gemma3n:e4b"
+
+# Detector tasks trusted without LLM escalation: chit-chat has no better
+# routing answer, and an LLM call would evict the fast model from VRAM.
+ROUTER_BYPASS_TASKS: Final[frozenset] = frozenset({"conversation"})
+
+# Embeddings (bge-small-en-v1.5 - 384-dim, drop-in for MiniLM, higher retrieval)
+EMBEDDING_MODEL_NAME: Final[str] = "BAAI/bge-small-en-v1.5"
 
 # Inference Settings
 MAX_LENGTH: Final[int] = 2048
@@ -136,7 +146,7 @@ AMEM_PROMOTION_SESSION_MIN: Final[int] = 3
 DIARY_MAX_ENTRIES_SOFT_CAP: Final[int] = 50_000
 
 REFLECTION_TRIGGER_DELAY_SEC: Final[int] = 30
-REFLECTION_MODEL_NAME: Final[str] = "qwen2.5:3b"
+REFLECTION_MODEL_NAME: Final[str] = "phi4-mini"
 
 CONSOLIDATION_CONFLICT_THRESH: Final[int] = 10
 CONSOLIDATION_SCHEDULE: Final[str] = "02:00"
@@ -287,7 +297,7 @@ MCP_RESOURCE_TYPES: Final[list] = [
 LIFE_OS_DIR: Final[Path] = PROJECT_ROOT / "modules" / "life_os"
 LIFE_OS_CONTEXT_DIR: Final[Path] = LIFE_OS_DIR / "context"
 LIFE_OS_LOG_DIR: Final[Path] = PROJECT_ROOT / "logs" / "life_os"
-LIFE_OS_MODEL: Final[str] = TASK_MODELS["conversation"]  # llama3.2:3b
+LIFE_OS_MODEL: Final[str] = TASK_MODELS["conversation"]  # gemma3:4b
 LIFE_OS_MORNING_HOUR: Final[int] = 7
 LIFE_OS_EVENING_HOUR: Final[int] = 21
 LIFE_OS_WEEKLY_HOUR: Final[int] = 10

@@ -20,6 +20,8 @@ from core.constants import (
     OLLAMA_BASE_URL,
     TASK_MODELS,
     OLLAMA_DEFAULT_MODEL,
+    ROUTER_MODEL_NAME,
+    ROUTER_BYPASS_TASKS,
     TASK_CATEGORIES,
 )
 
@@ -121,7 +123,7 @@ class AdaptiveRouter:
     
     def __init__(
         self,
-        router_model: str = "llama3.2:3b",
+        router_model: str = ROUTER_MODEL_NAME,
         confidence_threshold: float = 0.6,
         timeout: float = 30.0,  # Increased for model warmup
     ):
@@ -172,6 +174,18 @@ class AdaptiveRouter:
                 confidence=initial_confidence,
                 reasoning="High confidence from TaskDetector",
             )
+
+        # Trivial-chat bypass: detector already says conversation — there is
+        # no better routing answer, and an LLM call would evict the fast
+        # model from VRAM. Trust the detector.
+        if initial_task in ROUTER_BYPASS_TASKS:
+            model = TASK_MODELS.get(initial_task, TASK_MODELS.get("default", OLLAMA_DEFAULT_MODEL))
+            return RoutingDecision(
+                task=initial_task,
+                model=model,
+                confidence=initial_confidence,
+                reasoning="Trivial-chat bypass: detector task trusted without LLM escalation",
+            )
         
         # Slow path: use LLM to analyze
         self._llm_routes += 1
@@ -190,7 +204,7 @@ class AdaptiveRouter:
             # Fallback: use thinking model for safety
             return RoutingDecision(
                 task=initial_task,
-                model=TASK_MODELS.get("error_debugging", "qwen3:4b"),  # Safe fallback
+                model=TASK_MODELS.get("error_debugging", "qwen3:8b"),  # Safe fallback
                 confidence=initial_confidence,
                 reasoning=f"Router fallback due to error: {e}",
             )
@@ -266,7 +280,16 @@ class AdaptiveRouter:
                 raise ValueError(f"No JSON found in response: {response_text[:200]}")
             
             json_str = json_match.group()
-            data = json.loads(json_str)
+            try:
+                data = json.loads(json_str)
+            except json.JSONDecodeError:
+                # Some models emit single-quoted keys; yaml is a superset
+                # parser for such JSON5-ish output (pyyaml is already a dep).
+                import yaml
+
+                data = yaml.safe_load(json_str)
+                if not isinstance(data, dict):
+                    raise ValueError(f"No JSON object in response: {response_text[:200]}")
             
             # Extract fields with defaults
             task = data.get("task", fallback_task)
@@ -280,9 +303,9 @@ class AdaptiveRouter:
             
             # Select model based on complexity
             if is_complex:
-                model = TASK_MODELS.get("error_debugging", "qwen3:4b")  # Thinking model
+                model = TASK_MODELS.get("error_debugging", "qwen3:8b")  # Thinking model
             else:
-                model = TASK_MODELS.get(task, TASK_MODELS.get("default", "llama3.2:3b"))
+                model = TASK_MODELS.get(task, TASK_MODELS.get("default", "gemma3:4b"))
             
             return RoutingDecision(
                 task=task,
@@ -301,7 +324,7 @@ class AdaptiveRouter:
             # Return safe fallback
             return RoutingDecision(
                 task=fallback_task,
-                model=TASK_MODELS.get("error_debugging", "qwen3:4b"),
+                model=TASK_MODELS.get("error_debugging", "qwen3:8b"),
                 confidence=fallback_confidence,
                 reasoning=f"Parse error, using safe fallback: {e}",
             )
