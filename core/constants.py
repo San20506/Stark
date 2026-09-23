@@ -144,6 +144,10 @@ CONSOLIDATION_SCHEDULE: Final[str] = "02:00"
 TOOL_SCHEMA_CONFIDENCE_DECAY: Final[float] = 0.5
 TOOL_SCHEMA_STALENESS_DAYS: Final[int] = 30
 
+# Offline degraded fallbacks (R4: inference path never crashes when Ollama down)
+FALLBACK_CONFIDENCE: Final[float] = 0.0
+FALLBACK_PLAN_COMPLEXITY: Final[str] = "moderate"
+
 # ==============================================================================
 # CONTINUOUS LEARNING CONFIGURATION
 # ==============================================================================

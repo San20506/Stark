@@ -435,9 +435,12 @@ class STARK:
         """Load slim memory v2 pipeline modules (S3: diary + thread + reflection only).
 
         S3 slim-v2-pipeline: appraisal, episode, activation, graph,
-        consolidation, and tool_schema are intentionally NOT loaded on the
+        and tool_schema are intentionally NOT loaded on the
         hot path. Their files remain on disk for deferred/offline use.
         Diary semantic recall serves as the Hebbian-weighted recall.
+        ConsolidationJob IS loaded here (scheduler only — the daemon
+        sleeps and defers during active sessions, so it never touches
+        the hot path) so start()/stop() lifecycle blocks are live.
         """
         if self._diary_store is None:
             try:
@@ -465,6 +468,15 @@ class STARK:
                 logger.info("ReflectionLoop loaded")
             except Exception as e:
                 logger.warning(f"Failed to load ReflectionLoop: {e}")
+
+        if self._consolidation is None:
+            try:
+                from memory.consolidation import ConsolidationJob
+
+                self._consolidation = ConsolidationJob()
+                logger.info("ConsolidationJob loaded (scheduler only)")
+            except Exception as e:
+                logger.warning(f"Failed to load ConsolidationJob: {e}")
 
     # =========================================================================
     # PREDICTION

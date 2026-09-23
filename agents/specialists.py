@@ -16,7 +16,7 @@ from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 
 from agents.base_agent import BaseAgent, AgentResult, AgentType
-from core.constants import TASK_MODELS
+from core.constants import FALLBACK_CONFIDENCE, FALLBACK_PLAN_COMPLEXITY, TASK_MODELS
 
 logger = logging.getLogger(__name__)
 
@@ -196,14 +196,13 @@ class FastAnswerAgent(BaseAgent):
 
         except requests.exceptions.RequestException as e:
             # R4: degrade gracefully when Ollama is unreachable (offline/test env).
-            # TODO: move fallback confidence to core/constants.py (owned outside this change).
             logger.warning(f"FastAnswerAgent Ollama unavailable, degraded fallback: {e}")
             steps.append("Ollama unavailable, using degraded fallback")
             return AgentResult(
                 success=True,
                 output=json.dumps({
                     "answer": f"Language model unavailable, query received: {task}",
-                    "confidence": 0.0,
+                    "confidence": FALLBACK_CONFIDENCE,
                     "model": self._model,
                     "degraded": True,
                 }),
@@ -305,7 +304,7 @@ Output ONLY valid JSON."""
                 plan = {
                     "steps": ["Analyze request", "Execute", "Return result"],
                     "requires_tools": [],
-                    "complexity": "moderate",
+                    "complexity": FALLBACK_PLAN_COMPLEXITY,
                 }
             
             steps.append(f"Created plan with {len(plan.get('steps', []))} steps")
@@ -323,7 +322,7 @@ Output ONLY valid JSON."""
             plan = {
                 "steps": [f"Analyze request: {task}", "Execute plan", "Return result"],
                 "requires_tools": [],
-                "complexity": "moderate",
+                "complexity": FALLBACK_PLAN_COMPLEXITY,
                 "degraded": True,
             }
             steps.append(f"Created fallback plan with {len(plan['steps'])} steps")
