@@ -4,7 +4,7 @@ Test Web Agent
 Tests for web searching and scraping.
 """
 
-# import pytest
+import pytest
 import asyncio
 import json
 from agents.web_agent import WebAgent

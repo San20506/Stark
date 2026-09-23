@@ -1,5 +1,8 @@
 # Task: Math Reasoning Specification
 
+## Purpose
+Solve mathematical problems with step-by-step explanations.
+
 ## Overview
 Solve mathematical problems with step-by-step explanations.
 

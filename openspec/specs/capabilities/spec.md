@@ -1,5 +1,8 @@
 # Module 7: Capabilities Specification
 
+## Purpose
+Provide domain-specific intelligence modules that enhance STARK's responses in specialized areas.
+
 ## Overview
 Domain-specific intelligence modules that enhance STARK's responses in specialized areas.
 

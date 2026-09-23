@@ -120,14 +120,16 @@ def test_extract_insights_empty_text():
 # ---------------------------------------------------------------------------
 
 def test_summarize_via_llm_failure():
-    """When requests.post raises, a fallback ReflectionResult is returned."""
+    """When requests.post raises, the offline fallback writes a diary entry."""
     loop = _make_loop()
-    with patch("memory.reflection_loop.requests.post", side_effect=ConnectionError("no conn")):
+    with patch("memory.reflection_loop.requests.post", side_effect=ConnectionError("no conn")), \
+         patch("memory.diary_store.DiaryStore.write", return_value="entry-id") as mock_write:
         result = loop._summarize_via_llm("some conversation text")
 
     assert isinstance(result, ReflectionResult)
-    assert result.summary == "[Reflection unavailable]"
+    assert result.summary.startswith("[Offline reflection]")
     assert result.insights == []
+    assert mock_write.call_count == 1
 
 
 def test_summarize_via_llm_success(monkeypatch):
@@ -165,8 +167,9 @@ def test_summarize_via_llm_http_error(monkeypatch):
 
     monkeypatch.setattr("memory.reflection_loop.requests.post", lambda *a, **kw: mock_resp)
 
-    result = loop._summarize_via_llm("conversation")
-    assert result.summary == "[Reflection unavailable]"
+    with patch("memory.diary_store.DiaryStore.write", return_value="entry-id"):
+        result = loop._summarize_via_llm("conversation")
+    assert result.summary.startswith("[Offline reflection]")
 
 
 # ---------------------------------------------------------------------------

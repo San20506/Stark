@@ -1,5 +1,8 @@
 # Task: System Control Specification
 
+## Purpose
+Control desktop applications, system settings, and perform automation tasks.
+
 ## Overview
 Control desktop applications, system settings, and perform automation tasks.
 

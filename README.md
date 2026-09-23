@@ -166,8 +166,12 @@ cd Stark
 ```
 
 ### 2. Install Dependencies
+
+> Requires Python 3.11 (see `.python-version`). System Python has no `pip`,
+> so always install inside a venv.
+
 ```bash
-pip install -r requirements.txt
+python3.11 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
 npm install  # For Node.js dependencies
 ```
 
@@ -189,16 +193,14 @@ npm install -g @modelcontextprotocol/server-sqlite
 
 Some large files are excluded from the repository due to GitHub's size limits. Download them manually:
 
-#### GloVe Word Embeddings (~2GB)
+#### Sentence Embeddings — all-MiniLM-L6-v2 (~80MB)
+
+Standard post-S6 encoder (default in `memory/neuromorphic_memory.py`).
+Auto-downloaded on first use via `sentence_transformers` — no manual `wget`.
+
 ```bash
-mkdir -p data/glove
-cd data/glove
-
-# Download GloVe embeddings
-wget https://nlp.stanford.edu/data/glove.6B.zip
-unzip glove.6B.zip
-
-cd ../..
+# Pre-fetch explicitly (optional):
+python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 ```
 
 #### Voice Model (GPT-SoVITS) (~100MB)
@@ -247,8 +249,7 @@ The following files are in `.gitignore` to keep the repo under GitHub's limits:
 | Path | Size | Purpose | Download |
 |------|------|---------|----------|
 | `node_modules/` | ~115MB | Node.js deps | `npm install` |
-| `data/glove/*.txt` | ~2GB | Word embeddings | See above |
-| `data/glove/*.zip` | ~800MB | Embeddings archive | See above |
+| Hugging Face hub cache (`all-MiniLM-L6-v2`) | ~80MB | Sentence embeddings (auto-fetched) | No manual download |
 | `models/**/*.pth` | ~100MB+ | Model weights | See above |
 | `models/**/*.bin` | Varies | Binary models | Train or download |
 

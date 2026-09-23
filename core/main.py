@@ -22,7 +22,6 @@ from core.constants import (
     OLLAMA_DEFAULT_MODEL,
     MCP_SERVER_ENABLED,
     MCP_CLIENT_ENABLED,
-    MEMORY_V2_ENABLED,
 )
 from core.config import get_config, STARKConfig
 from core.task_detector import get_detector, TaskDetector
@@ -173,6 +172,31 @@ class STARK:
                 except Exception as e:
                     logger.warning(f"Failed to start MCP Manager: {e}")
 
+            # Memory v2 lifecycle (S1): init modules, reflection loop, consolidation
+            if self.config.memory_v2.enabled:
+                self._load_modules_v2()
+                if self._reflection_loop is not None:
+                    start_fn = getattr(self._reflection_loop, "start", None)
+                    if callable(start_fn):
+                        try:
+                            start_fn()
+                            logger.info("Reflection loop started")
+                        except Exception as e:
+                            logger.warning(f"Failed to start reflection loop: {e}")
+                    else:
+                        logger.info("ReflectionLoop loaded (timer-driven, no daemon)")
+                if self._consolidation is not None:
+                    if self._current_session_id is not None:
+                        logger.info(
+                            "Active session holds lock; deferring consolidation start"
+                        )
+                    else:
+                        try:
+                            self._consolidation.start()
+                            logger.info("Consolidation job scheduled")
+                        except Exception as e:
+                            logger.warning(f"Failed to schedule consolidation: {e}")
+
             self._running = True
             self._start_time = datetime.now()
             logger.info("STARK system started successfully")
@@ -212,6 +236,31 @@ class STARK:
                 except Exception as e:
                     logger.warning(f"Failed to start MCP Manager: {e}")
 
+            # Memory v2 lifecycle (S1): init modules, reflection loop, consolidation
+            if self.config.memory_v2.enabled:
+                self._load_modules_v2()
+                if self._reflection_loop is not None:
+                    start_fn = getattr(self._reflection_loop, "start", None)
+                    if callable(start_fn):
+                        try:
+                            start_fn()
+                            logger.info("Reflection loop started")
+                        except Exception as e:
+                            logger.warning(f"Failed to start reflection loop: {e}")
+                    else:
+                        logger.info("ReflectionLoop loaded (timer-driven, no daemon)")
+                if self._consolidation is not None:
+                    if self._current_session_id is not None:
+                        logger.info(
+                            "Active session holds lock; deferring consolidation start"
+                        )
+                    else:
+                        try:
+                            self._consolidation.start()
+                            logger.info("Consolidation job scheduled")
+                        except Exception as e:
+                            logger.warning(f"Failed to schedule consolidation: {e}")
+
             self._running = True
             self._start_time = datetime.now()
             logger.info("STARK system started successfully")
@@ -224,6 +273,76 @@ class STARK:
                 return
 
             logger.info("Stopping STARK system...")
+
+            # Memory v2 shutdown (S1): drain reflection, stop consolidation,
+            # checkpoint sessions, persist graph + schemas — before teardown.
+            if self.config.memory_v2.enabled:
+                if self._reflection_loop is not None:
+                    try:
+                        drain_fn = getattr(
+                            self._reflection_loop, "drain", None
+                        ) or getattr(self._reflection_loop, "stop", None)
+                        if callable(drain_fn):
+                            drain_fn()
+                        else:
+                            # Timer-driven loop: complete any pending reflection job.
+                            timer = getattr(self._reflection_loop, "_timer", None)
+                            if timer is not None:
+                                try:
+                                    if timer.is_alive():
+                                        timer.join(timeout=5.0)
+                                except Exception:
+                                    pass
+                                try:
+                                    timer.cancel()
+                                except Exception:
+                                    pass
+                        logger.info("Reflection loop drained")
+                    except Exception as e:
+                        logger.warning(f"Failed to drain reflection loop: {e}")
+
+                if self._consolidation is not None:
+                    try:
+                        self._consolidation.stop(timeout=5.0)
+                        logger.info("Consolidation job stopped")
+                    except Exception as e:
+                        logger.warning(f"Failed to stop consolidation job: {e}")
+
+                try:
+                    mgr = self._thread_state_mgr
+                    if mgr is None:
+                        from memory.thread_state import get_thread_state_manager
+
+                        mgr = get_thread_state_manager()
+                    mgr.checkpoint_all()
+                    logger.info("Thread states checkpointed")
+                except Exception as e:
+                    logger.warning(f"Failed to checkpoint thread states: {e}")
+
+                for store_attr in ("_knowledge_graph", "_tool_schema_store"):
+                    try:
+                        store = getattr(self, store_attr, None)
+                        if store is None:
+                            continue
+                        persisted = False
+                        for method_name in ("save", "persist", "flush"):
+                            method = getattr(store, method_name, None)
+                            if callable(method):
+                                try:
+                                    method()
+                                except TypeError:
+                                    continue
+                                persisted = True
+                                break
+                        if persisted:
+                            logger.info(f"{store_attr} persisted")
+                        else:
+                            logger.debug(
+                                f"{store_attr} has no persist hook; "
+                                "state is sqlite-backed or memory-only"
+                            )
+                    except Exception as e:
+                        logger.warning(f"Failed to persist {store_attr}: {e}")
 
             if self._learner is not None and self._learner.is_running():
                 self._learner.stop(timeout=5.0)
@@ -242,13 +361,6 @@ class STARK:
                     logger.info("Memory state saved")
                 except Exception as e:
                     logger.error(f"Failed to save memory: {e}")
-
-            try:
-                from memory.thread_state import get_thread_state_manager
-
-                get_thread_state_manager().checkpoint_all()
-            except Exception as e:
-                logger.warning(f"Failed to checkpoint thread states: {e}")
 
             self._running = False
             logger.info("STARK system stopped")
@@ -272,15 +384,12 @@ class STARK:
                 logger.warning(f"Failed to load NeuromorphicMemory: {e}")
                 self._memory = None
 
-        if self._learner is None and self._memory is not None:
+        # S4 quarantined: learning/ moved to archive/quarantined/learning/.
+        # Learner disabled; degrade to learning_active=False.
+        if self._learner is None:
             try:
-                from learning.continual_learner import ContinualLearner
-
-                self._learner = ContinualLearner(
-                    memory=self._memory,
-                    ollama_url=OLLAMA_BASE_URL,
-                )
-                logger.info("ContinualLearner loaded")
+                self._learner = None
+                logger.info("ContinualLearner quarantined (learning_active=False)")
             except Exception as e:
                 logger.warning(f"Failed to load ContinualLearner: {e}")
                 self._learner = None
@@ -301,7 +410,7 @@ class STARK:
                 )
                 self._media_store = None
 
-        if MEMORY_V2_ENABLED:
+        if self.config.memory_v2.enabled:
             self._load_modules_v2()
 
         self._check_ollama()
@@ -323,15 +432,21 @@ class STARK:
         return self._ollama_available
 
     def _load_modules_v2(self) -> None:
-        """Load memory v2 cognitive pipeline modules."""
-        if self._appraisal_engine is None:
-            try:
-                from memory.appraisal_engine import AppraisalEngine
+        """Load slim memory v2 pipeline modules (S3: diary + thread + reflection only).
 
-                self._appraisal_engine = AppraisalEngine()
-                logger.info("AppraisalEngine loaded")
+        S3 slim-v2-pipeline: appraisal, episode, activation, graph,
+        consolidation, and tool_schema are intentionally NOT loaded on the
+        hot path. Their files remain on disk for deferred/offline use.
+        Diary semantic recall serves as the Hebbian-weighted recall.
+        """
+        if self._diary_store is None:
+            try:
+                from memory.diary_store import get_diary_store
+
+                self._diary_store = get_diary_store()
+                logger.info("DiaryStore loaded")
             except Exception as e:
-                logger.warning(f"Failed to load AppraisalEngine: {e}")
+                logger.warning(f"Failed to load DiaryStore: {e}")
 
         if self._thread_state_mgr is None:
             try:
@@ -342,51 +457,6 @@ class STARK:
             except Exception as e:
                 logger.warning(f"Failed to load ThreadStateManager: {e}")
 
-        if self._diary_store is None:
-            try:
-                from memory.diary_store import get_diary_store
-
-                self._diary_store = get_diary_store()
-                logger.info("DiaryStore loaded")
-            except Exception as e:
-                logger.warning(f"Failed to load DiaryStore: {e}")
-
-        if self._activation_scorer is None:
-            try:
-                from memory.activation_scorer import ActivationScorer
-
-                self._activation_scorer = ActivationScorer()
-                logger.info("ActivationScorer loaded")
-            except Exception as e:
-                logger.warning(f"Failed to load ActivationScorer: {e}")
-
-        if self._episode_manager is None:
-            try:
-                from memory.episode_manager import EpisodeManager
-
-                self._episode_manager = EpisodeManager()
-                logger.info("EpisodeManager loaded")
-            except Exception as e:
-                logger.warning(f"Failed to load EpisodeManager: {e}")
-
-        if self._knowledge_graph is None:
-            try:
-                from memory.knowledge_graph import KnowledgeGraph
-
-                self._knowledge_graph = KnowledgeGraph()
-                logger.info("KnowledgeGraph loaded")
-            except Exception as e:
-                logger.warning(f"Failed to load KnowledgeGraph: {e}")
-
-        if self._tool_schema_store is None:
-            try:
-                from memory.tool_schema_store import ToolSchemaStore
-
-                self._tool_schema_store = ToolSchemaStore()
-                logger.info("ToolSchemaStore loaded")
-            except Exception as e:
-                logger.warning(f"Failed to load ToolSchemaStore: {e}")
-
         if self._reflection_loop is None:
             try:
                 from memory.reflection_loop import ReflectionLoop
@@ -395,15 +465,6 @@ class STARK:
                 logger.info("ReflectionLoop loaded")
             except Exception as e:
                 logger.warning(f"Failed to load ReflectionLoop: {e}")
-
-        if self._consolidation is None:
-            try:
-                from memory.consolidation import ConsolidationJob
-
-                self._consolidation = ConsolidationJob()
-                logger.info("ConsolidationJob loaded")
-            except Exception as e:
-                logger.warning(f"Failed to load ConsolidationJob: {e}")
 
     # =========================================================================
     # PREDICTION
@@ -454,7 +515,7 @@ class STARK:
 
             # Step 1.5: Memory v2 pipeline (appraisal + episode + scored recall)
             v2_context = ""
-            if MEMORY_V2_ENABLED and self._thread_state_mgr is not None:
+            if self.config.memory_v2.enabled and self._thread_state_mgr is not None:
                 try:
                     v2_context = self._run_v2_pipeline(query, task, confidence)
                 except Exception as e:
@@ -487,49 +548,12 @@ class STARK:
                         f"Adaptive routing: {task} (reasoning: {routing.reasoning})"
                     )
 
-                    # Check if we should use autonomous orchestrator for complex tasks
-                    complex_tasks = [
-                        "code_generation",
-                        "error_debugging",
-                        "system_control",
-                        "research",
-                    ]
-                    if task in complex_tasks or confidence < 0.5:
-                        try:
-                            from agents.autonomous_orchestrator import (
-                                get_autonomous_orchestrator,
-                            )
-
-                            logger.info(
-                                "Using autonomous orchestrator for complex task"
-                            )
-
-                            orchestrator = get_autonomous_orchestrator()
-                            result = orchestrator.predict(query)
-
-                            return PredictionResult(
-                                response=result.get(
-                                    "response", "No response generated"
-                                ),
-                                task=task,
-                                confidence=result.get("confidence", confidence),
-                                latency_ms=result.get(
-                                    "latency_ms",
-                                    (time.perf_counter() - start_time) * 1000,
-                                ),
-                                memory_stored=False,
-                            )
-                        except Exception as e:
-                            logger.warning(
-                                f"Autonomous orchestrator failed: {e}, falling back to simple path"
-                            )
-
                 except ImportError:
                     logger.warning("AdaptiveRouter not available, using fast path")
 
             # Step 2: Recall relevant memories
             relevant_memories = []
-            if MEMORY_V2_ENABLED and self._memory is not None:
+            if self.config.memory_v2.enabled and self._memory is not None:
                 try:
                     memories = self._memory.recall(query, task=task, top_k=3)
                     relevant_memories = memories
@@ -542,7 +566,7 @@ class STARK:
 
             # Step 4: Store experience + update v2 state
             memory_stored = False
-            if MEMORY_V2_ENABLED and self._memory is not None and response:
+            if self.config.memory_v2.enabled and self._memory is not None and response:
                 try:
                     self._memory.store(query, response, task)
                     memory_stored = True
@@ -550,7 +574,7 @@ class STARK:
                     logger.warning(f"Memory store failed: {e}")
 
             # Step 4.5: Update thread state + episode segmentation
-            if MEMORY_V2_ENABLED and self._thread_state_mgr is not None and response:
+            if self.config.memory_v2.enabled and self._thread_state_mgr is not None and response:
                 try:
                     self._update_v2_state(query, response, confidence)
                 except Exception as e:
@@ -682,84 +706,38 @@ class STARK:
         return f"{system}\n\nUser: {query}\n\nAssistant:"
 
     def _run_v2_pipeline(self, query: str, task: str, confidence: float) -> str:
-        """Run the 7-step memory v2 pipeline and return assembled LLM context."""
+        """Run the slim memory v2 pipeline: diary recall + recent messages only."""
         session = self._thread_state_mgr.get_or_create_session(self._current_session_id)
         self._current_session_id = session.session_id
 
-        appraisal = self._appraisal_engine.compute(
-            query, session.messages, {"task_confidence": confidence}
-        )
-        emotion_vector = list(appraisal.values())
-
-        if self._episode_manager.should_segment(confidence):
-            episode = self._episode_manager.create_episode_from_session(session)
-            self._episode_manager.commit_episode(episode)
-
-        scored_candidates = []
+        diary_records = []
         if self._diary_store is not None:
-            diary_records = self._diary_store.query_semantic(
-                query, top_k=20, query_emotion_vector=emotion_vector
-            )
-            scored_candidates = diary_records
+            diary_records = self._diary_store.query_semantic(query, top_k=20)
 
-        graph_results = []
-        if self._knowledge_graph is not None:
-            import numpy as np
-            from memory.appraisal_engine import _hash_embedding
-
-            query_embedding = _hash_embedding(query)
-            graph_results = self._knowledge_graph.query_associative(
-                query_embedding, top_k=5
-            )
-
-        return self._build_v2_context(
-            appraisal, scored_candidates[:5], graph_results, session.messages[-4:]
-        )
+        return self._build_v2_context(diary_records, session.messages[-4:])
 
     def _update_v2_state(self, query: str, response: str, confidence: float) -> None:
-        """Update thread state and episode segmentation after response."""
+        """Checkpoint thread state and trigger reflection only (S3 slim)."""
         if self._thread_state_mgr is None or self._current_session_id is None:
             return
 
-        appraisal = (
-            self._appraisal_engine.compute(query) if self._appraisal_engine else {}
-        )
-        emotion_vector = list(appraisal.values()) if appraisal else []
+        self._thread_state_mgr.update(self._current_session_id, query, response)
 
-        if self._episode_manager and self._episode_manager.should_segment(confidence):
-            session = self._thread_state_mgr.load_session(self._current_session_id)
-            episode = self._episode_manager.create_episode_from_session(session)
-            episode_id = self._episode_manager.commit_episode(episode)
-            self._thread_state_mgr.update(
-                self._current_session_id,
-                query,
-                response,
-                emotion_vector=emotion_vector,
-                episode_boundary=episode_id,
-            )
-        else:
-            self._thread_state_mgr.update(
-                self._current_session_id,
-                query,
-                response,
-                emotion_vector=emotion_vector,
-            )
-
-        if (
-            self._reflection_loop is not None
-            and self._thread_state_mgr.is_conversation_ended(self._current_session_id)
-        ):
-            session = self._thread_state_mgr.load_session(self._current_session_id)
-            self._reflection_loop.trigger(session)
+        if self._reflection_loop is not None:
+            try:
+                session = self._thread_state_mgr.load_session(
+                    self._current_session_id
+                )
+                self._reflection_loop.trigger(session)
+            except Exception as e:
+                logger.warning(f"Reflection trigger failed: {e}")
 
     def _build_v2_context(
         self,
-        appraisal: Dict[str, float],
         diary_records: list,
-        graph_results: list,
         recent_messages: list,
     ) -> str:
-        """Assemble LLM context from memory v2 sources."""
+        """Assemble LLM context from diary recall + recent session messages."""
         parts = []
 
         if diary_records:
@@ -769,19 +747,6 @@ class STARK:
                 suffix = f" [tags: {tags_str}]" if tags_str else ""
                 diary_lines.append(f"- {record.content[:200]}{suffix}")
             parts.append("Relevant memories:\n" + "\n".join(diary_lines))
-
-        if graph_results:
-            graph_lines = []
-            for node_id, sim in graph_results[:3]:
-                node = (
-                    self._knowledge_graph._nodes.get(node_id)
-                    if self._knowledge_graph
-                    else None
-                )
-                if node:
-                    graph_lines.append(f"- {node.content[:200]} (sim={sim:.2f})")
-            if graph_lines:
-                parts.append("Related concepts:\n" + "\n".join(graph_lines))
 
         if recent_messages:
             msg_lines = []
@@ -1027,9 +992,9 @@ class STARK:
             True if speech started successfully
         """
         try:
-            from voice.enhanced_tts import get_enhanced_tts
+            from voice.text_to_speech import get_tts
 
-            tts = get_enhanced_tts()
+            tts = get_tts()
             return tts.speak(text)
         except ImportError:
             logger.warning("TTS not available")
@@ -1042,16 +1007,16 @@ class STARK:
         """
         Run continuous voice interaction mode.
 
-        Listens for wake word (if enabled), then processes voice commands.
+        Continuously listens, transcribes, and responds.
         Press Ctrl+C to exit.
 
         Args:
-            wake_word_enabled: Use wake word detection before listening
+            wake_word_enabled: Deprecated (wake-word engine quarantined);
+                accepted for backward compatibility and ignored.
         """
         logger.info("Starting voice mode...")
 
         try:
-            from voice.wake_word import get_wake_word_detector
             from voice.text_to_speech import get_tts
 
             tts = get_tts()
@@ -1060,46 +1025,17 @@ class STARK:
             if tts.is_available():
                 tts.speak("STARK voice mode activated, sir.")
 
-            if wake_word_enabled:
-                detector = get_wake_word_detector()
-                if detector.is_available():
-                    # Callback when wake word detected
-                    def on_wake(event):
-                        logger.info(f"Wake word: {event.word}")
-                        result = self.predict_voice()
-                        if result.response:
-                            logger.info(f"Response: {result.response}")
-                            self.speak(result.response)
-
-                    detector.on_wake(on_wake)
-                    detector.start()
-
-                    logger.info("Listening for wake word... (Ctrl+C to exit)")
-                    try:
-                        while True:
-                            time.sleep(0.1)
-                    except KeyboardInterrupt:
-                        pass
-                    finally:
-                        detector.stop()
-                else:
-                    logger.warning(
-                        "Wake word not available, falling back to continuous mode"
-                    )
-                    wake_word_enabled = False
-
-            if not wake_word_enabled:
-                # Continuous listening without wake word
-                logger.info("Continuous voice mode... (Ctrl+C to exit)")
-                try:
-                    while True:
-                        result = self.predict_voice()
-                        if result.response and result.task != "error":
-                            logger.info(f"Response: {result.response}")
-                            self.speak(result.response)
-                        time.sleep(0.5)
-                except KeyboardInterrupt:
-                    pass
+            # Continuous listening (wake-word engine quarantined)
+            logger.info("Continuous voice mode... (Ctrl+C to exit)")
+            try:
+                while True:
+                    result = self.predict_voice()
+                    if result.response and result.task != "error":
+                        logger.info(f"Response: {result.response}")
+                        self.speak(result.response)
+                    time.sleep(0.5)
+            except KeyboardInterrupt:
+                pass
 
             # Goodbye
             if tts.is_available():

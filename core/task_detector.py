@@ -606,3 +606,9 @@ def get_detector() -> TaskDetector:
         _detector_instance = TaskDetector()
     
     return _detector_instance
+
+
+def reset_task_detector() -> None:
+    """Reset detector singleton (for testing)."""
+    global _detector_instance
+    _detector_instance = None

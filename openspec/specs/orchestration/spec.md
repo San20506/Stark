@@ -1,5 +1,8 @@
 # Module 8: Orchestration Specification
 
+## Purpose
+Integrate all STARK modules into a unified system with a single entry point.
+
 ## Overview
 Main STARK class that integrates all modules into a unified system with single entry point.
 

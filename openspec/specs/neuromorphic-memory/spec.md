@@ -1,5 +1,8 @@
 # Neuromorphic Memory Specification
 
+## Purpose
+Provide a distributed, brain-inspired associative memory with decaying networks that replaces flat experience replay.
+
 ## Overview
 Distributed, brain-inspired memory system that replaces simple Experience Replay with associative, decaying memory networks.
 

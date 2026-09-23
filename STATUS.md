@@ -8,8 +8,9 @@
 ## TL;DR
 
 All 9 memory v2 module files are written. The plan is complete on paper.
-**Nothing runs** — `sentence_transformers` is not installed and breaks every memory import.
-Pytest itself is broken (`pygments` missing). Core STARK (routing, config, orchestration) is healthy.
+Only `NeuromorphicMemory`'s encoder directly needs `sentence_transformers`
+(lazy-loaded, degrades gracefully); `memory/__init__` is lazy per S2 so other
+modules import cleanly. Pytest itself is broken (`pygments` missing). Core STARK (routing, config, orchestration) is healthy.
 
 ---
 
@@ -18,17 +19,16 @@ Pytest itself is broken (`pygments` missing). Core STARK (routing, config, orche
 | Check | Status | Detail |
 |-------|--------|--------|
 | `core.*` imports | ✅ OK | constants, config, main, router, task_detector all load |
-| `memory.*` imports | ❌ BLOCKED | All 11/12 modules fail: `No module named 'sentence_transformers'` |
+| `memory.*` imports | ✅ LAZY | `memory/__init__` lazy per S2; only `NeuromorphicMemory` encoder needs `sentence_transformers` |
 | pytest | ❌ BROKEN | `No module named 'pygments'` — test suite cannot execute |
 | scikit-learn | ✅ Present | 1.8.0 |
 | pluggy | ✅ Present | 1.6.0 |
-| sentence_transformers | ❌ Missing | Required by every memory v2 module |
-| networkx | ❌ Unknown | Required by `knowledge_graph.py` |
+| sentence_transformers | ❌ Missing | Needed only for `NeuromorphicMemory` encoder (`all-MiniLM-L6-v2`); degrades gracefully when absent |
 | chromadb | ❌ Unknown | Required by media-memory integration |
 
 **Fix first:**
 ```bash
-pip install sentence_transformers networkx pygments
+pip install sentence_transformers pygments
 ```
 
 ---
@@ -41,26 +41,26 @@ pip install sentence_transformers networkx pygments
 |-------|-------------|--------|
 | 1.1 | Constants + MemoryV2Config | ✅ Done — `ACTIR_DECAY_RATE`, all v2 constants present |
 | 1.2 | `MEMORY_V2_ENABLED` feature flag | ✅ Done — defaults `False`, wired into `core/main.py` |
-| 1.3 | `memory/thread_state.py` | ✅ Written — not importable (sentence_transformers) |
-| 1.4 | Episodic DB schema migration | ✅ Written (`memory/episodic_schema.py`) — not importable |
-| 1.5 | `memory/appraisal_engine.py` | ✅ Written — not importable |
-| 1.6 | `memory/diary_store.py` | ✅ Written — not importable |
+| 1.3 | `memory/thread_state.py` | ✅ Written — imports via lazy `memory/__init__` |
+| 1.4 | Episodic DB schema migration | ✅ Written (`memory/episodic_schema.py`) |
+| 1.5 | `memory/appraisal_engine.py` | ✅ Written |
+| 1.6 | `memory/diary_store.py` | ✅ Written |
 
 ### Week 2 — Memory Intelligence Layer
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| 2.1 | `memory/activation_scorer.py` | ✅ Written — not importable |
-| 2.2 | `memory/episode_manager.py` | ✅ Written — not importable |
-| 2.3 | `memory/knowledge_graph.py` | ✅ Written — not importable |
+| 2.1 | `memory/activation_scorer.py` | ✅ Written |
+| 2.2 | `memory/episode_manager.py` | ✅ Written |
+| 2.3 | `memory/knowledge_graph.py` | ✅ Written — hand-rolled (dict + adjacency, NumPy); no NetworkX |
 
 ### Week 3 — Integration Layer
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| 3.1 | `memory/reflection_loop.py` | ✅ Written — not importable |
-| 3.2 | `memory/tool_schema_store.py` | ✅ Written — not importable |
-| 3.3 | `memory/consolidation.py` | ✅ Written — not importable |
+| 3.1 | `memory/reflection_loop.py` | ✅ Written (default `REFLECTION_MODEL_NAME="qwen2.5:3b"` per `core/constants.py`) |
+| 3.2 | `memory/tool_schema_store.py` | ✅ Written |
+| 3.3 | `memory/consolidation.py` | ✅ Written |
 | 3.4 | Wire into `core/main.py` | ⚠️ Partial — module refs added, lazy-load stubs present; full pipeline not wired |
 | 3.5 | Full test suite | ⚠️ Partial — all test files exist, pytest cannot run |
 
@@ -72,17 +72,17 @@ pip install sentence_transformers networkx pygments
 
 ```
 memory_node.py          ✅ Importable (no sentence_transformers dep)
-neuromorphic_memory.py  ❌ sentence_transformers
-thread_state.py         ❌ sentence_transformers
-appraisal_engine.py     ❌ sentence_transformers
-diary_store.py          ❌ sentence_transformers
-activation_scorer.py    ❌ sentence_transformers
-episode_manager.py      ❌ sentence_transformers
-knowledge_graph.py      ❌ sentence_transformers
-reflection_loop.py      ❌ sentence_transformers
-tool_schema_store.py    ❌ sentence_transformers
-consolidation.py        ❌ sentence_transformers
-episodic_schema.py      ❌ sentence_transformers
+neuromorphic_memory.py  ⚠️ Encoder-only ST dep (`all-MiniLM-L6-v2`, lazy_load=True, degrades gracefully)
+thread_state.py         ✅ Importable via lazy memory/__init__ (no ST dep)
+appraisal_engine.py     ✅ Importable via lazy memory/__init__ (no ST dep)
+diary_store.py          ✅ Importable via lazy memory/__init__ (no ST dep)
+activation_scorer.py    ✅ Importable via lazy memory/__init__ (no ST dep)
+episode_manager.py      ✅ Importable via lazy memory/__init__ (no ST dep)
+knowledge_graph.py      ✅ Importable — hand-rolled, no NetworkX (no ST dep)
+reflection_loop.py      ✅ Importable via lazy memory/__init__ (no ST dep)
+tool_schema_store.py    ✅ Importable via lazy memory/__init__ (no ST dep)
+consolidation.py        ✅ Importable via lazy memory/__init__ (no ST dep)
+episodic_schema.py      ✅ Importable via lazy memory/__init__ (no ST dep)
 ```
 
 ### `core/` — Healthy
@@ -132,7 +132,7 @@ test_life_os.py             ✅ Exists
 
 ### Immediate (unblocks everything)
 
-- [ ] `pip install sentence_transformers networkx pygments` — unblocks all memory imports and pytest
+- [ ] `pip install sentence_transformers pygments` — enables `NeuromorphicMemory` encoder + pytest
 - [ ] Run `pytest tests/ -v --tb=short` — establish baseline
 
 ### Phase 3.4 — core/main.py wiring (incomplete)
@@ -190,7 +190,7 @@ test_life_os.py             ✅ Exists
 
 ## Next Session Priorities
 
-1. **Fix env:** `pip install sentence_transformers networkx pygments`
+1. **Fix env:** `pip install sentence_transformers pygments`
 2. **Run tests:** Get pytest green, assess module correctness
 3. **Complete Phase 3.4:** Wire full predict() pipeline in core/main.py
 4. **Validate end-to-end:** `MEMORY_V2_ENABLED=true python stark_cli.py`

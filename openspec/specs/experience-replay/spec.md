@@ -1,5 +1,8 @@
 # Module 3: Experience Replay Specification
 
+## Purpose
+Store and retrieve interaction experiences for continuous learning at scale in system RAM.
+
 ## Overview
 Store and retrieve interaction experiences for continuous learning. Maintains 1M+ experiences in system RAM with efficient sampling.
 

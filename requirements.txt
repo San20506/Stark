@@ -5,47 +5,52 @@
 # ==============================================================================
 # CORE ML FRAMEWORK
 # ==============================================================================
-torch>=2.1.0
+torch>=2.1.0,<2.9
 transformers>=4.35.0
 accelerate>=0.24.0
 
 # ==============================================================================
 # PARAMETER-EFFICIENT FINE-TUNING
 # ==============================================================================
-peft>=0.7.0                 # LoRA/QLoRA adapters
-bitsandbytes>=0.41.0        # INT8/INT4 quantization
+peft>=0.7.0,<1.0                 # LoRA/QLoRA adapters
+bitsandbytes>=0.41.0,<1.0        # INT8/INT4 quantization
 
 # ==============================================================================
 # DATA & EMBEDDINGS
 # ==============================================================================
-numpy>=1.24.0
+numpy>=1.24.0,<2.3
 scipy>=1.11.0
-scikit-learn>=1.3.0         # TF-IDF for task detection
-sentence-transformers>=2.2.0 # Semantic embeddings
+scikit-learn>=1.3.0,<1.8         # TF-IDF for task detection
+psutil>=5.9.0,<8.0               # system monitoring (automation, agents)
+beautifulsoup4>=4.12.0,<5.0      # HTML parsing (agents/web_agent)
+html2text>=2020.1.16,<2025.0     # HTML→markdown (agents/web_agent)
+playwright>=1.40,<1.55          # browser automation (utils/browser_manager; needs `playwright install chromium` for live use)
+sentence-transformers>=2.2.0,<6.0 # Semantic embeddings
+requests>=2.31.0,<3.0           # HTTP client (agents, memory, connectors)
 
 # ==============================================================================
 # CONFIGURATION & VALIDATION
 # ==============================================================================
-pydantic>=2.0.0             # Config validation
-pyyaml>=6.0                 # YAML config files
+pydantic>=2.0.0,<3.0             # Config validation
+pyyaml>=6.0,<7.0                 # YAML config files
 
 # ==============================================================================
 # MONITORING & LOGGING
 # ==============================================================================
-tensorboard>=2.14.0         # Training visualization
+tensorboard>=2.14.0,<2.20      # Training visualization
 tqdm>=4.66.0                # Progress bars
 
 # ==============================================================================
 # MCP (MODEL CONTEXT PROTOCOL)
 # ==============================================================================
-mcp>=1.12.0                # Official MCP Python SDK
+mcp>=1.12.0,<2.0             # Official MCP Python SDK
 asyncio-mqtt>=0.16.0       # For async MCP communication (optional)
 
 # ==============================================================================
 # TESTING
 # ==============================================================================
-pytest>=7.4.0
-pytest-cov>=4.1.0
+pytest>=7.4.0,<9.0
+pytest-cov>=4.1.0,<7.0
 
 # ==============================================================================
 # VECTOR DATABASE + MEDIA MEMORY

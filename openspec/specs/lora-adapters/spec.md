@@ -1,5 +1,8 @@
 # Module 4: LoRA Adapters Specification
 
+## Purpose
+Enable task-specific fine-tuning via Low-Rank Adaptation with minimal memory overhead per adapter.
+
 ## Overview
 Implement Low-Rank Adaptation (LoRA) for task-specific fine-tuning with minimal memory overhead (~5-10MB per adapter).
 

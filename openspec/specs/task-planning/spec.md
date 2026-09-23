@@ -1,5 +1,8 @@
 # Task: Planning Specification
 
+## Purpose
+Create structured plans, roadmaps, and step-by-step guides for projects and tasks.
+
 ## Overview
 Create structured plans, roadmaps, and step-by-step guides for projects and tasks.
 

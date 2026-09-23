@@ -1,5 +1,8 @@
 # Task: Code Explanation Specification
 
+## Purpose
+Explain code functionality, patterns, and logic in clear, understandable terms.
+
 ## Overview
 Explain code functionality, patterns, and logic in clear, understandable terms.
 

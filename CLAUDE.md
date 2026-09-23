@@ -104,7 +104,33 @@ python run_voice.py                    # voice mode
 python web_server.py                   # web UI + MCP API
 MEMORY_V2_ENABLED=true python stark_cli.py  # with memory v2
 ruff check .                           # lint
+make check                             # lint + format + security
+make test                              # tests with coverage
 ```
+
+## Token Optimization (Adapted from Minimize-Cursor-Cost)
+
+### Response Discipline
+- Start with the answer — no preamble, no "Sure", no sign-off
+- Diffs by default — never rewrite entire files when a patch works
+- Max 2 alternatives with a stated recommendation
+- One clarifying question at a time, not a list
+- >3 files unprompted → pause and ask where to start
+
+### Agent Efficiency
+- Never re-read files — use grep for known symbols
+- Search before read — `grep -n "def func"` instead of reading whole file
+- Batch independent tool calls in parallel
+- No speculative exploration — don't "look around the repo first"
+- Targeted reads for files >500 lines — never load the whole file
+- No build/test/lint after every edit — only on risky changes or user request
+- Stop when done — no "for safety" verification rounds, no summary
+
+### Cost Awareness
+- Check `core/constants.py` first — before suggesting any new parameter
+- Check existing modules — before creating new ones
+- Use diff output — 200-line rewrite = 2000 tokens, patch = 200 tokens
+- Keep rules files still — edited rules break prompt caching
 
 ## Persistent Memory
 

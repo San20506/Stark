@@ -49,7 +49,7 @@ class ReflectionLoop:
 
     def _run_reflection(self, session_state: SessionState) -> ReflectionResult:
         conversation_text = self._build_conversation_text(session_state)
-        result = self._summarize_via_llm(conversation_text)
+        result = self._summarize_via_llm(conversation_text, session_state)
         with self._lock:
             self._last_result = result
         return result
@@ -63,7 +63,11 @@ class ReflectionLoop:
                 lines.append(f"{role}: {content}")
         return "\n".join(lines)
 
-    def _summarize_via_llm(self, conversation_text: str) -> ReflectionResult:
+    def _summarize_via_llm(
+        self,
+        conversation_text: str,
+        session_state: Optional[SessionState] = None,
+    ) -> ReflectionResult:
         prompt = (
             "You are analyzing a conversation to extract key insights and create a summary.\n\n"
             "Provide your analysis in this format:\n"
@@ -85,11 +89,7 @@ class ReflectionLoop:
             text = response.json().get("response", "")
         except Exception as exc:
             logger.warning("Reflection LLM call failed: %s", exc)
-            return ReflectionResult(
-                insights=[],
-                summary="[Reflection unavailable]",
-                triggered_at=time.time(),
-            )
+            return self._fallback_reflection(session_state, conversation_text)
 
         summary = ""
         if text.startswith("Summary:"):
@@ -109,6 +109,47 @@ class ReflectionLoop:
 
         return ReflectionResult(
             insights=insights, summary=summary, triggered_at=time.time()
+        )
+
+    def _fallback_reflection(
+        self,
+        session_state: Optional[SessionState],
+        conversation_text: str,
+    ) -> ReflectionResult:
+        """Rule-based fallback when the reflection LLM is unreachable.
+
+        Builds a minimal diary entry from session metadata only — never raises.
+        """
+        from memory.diary_store import DiaryEntry, DiaryStore
+
+        messages = session_state.messages if session_state is not None else []
+        n = len(messages)
+        first_query = next(
+            (m.get("content", "") for m in messages if m.get("role") == "user"),
+            "",
+        )
+        snippet = (first_query[:120] + "…") if len(first_query) > 120 else first_query
+        session_id = session_state.session_id if session_state is not None else None
+        summary = (
+            f"[Offline reflection] exchanged {n} messages."
+            + (f" session {session_id}." if session_id else "")
+            + (f" Opened with: {snippet}" if snippet else "")
+        )
+        try:
+            DiaryStore().write(
+                DiaryEntry(
+                    content=summary,
+                    session_id=session_id,
+                    insights="",
+                    tags=["reflection", "offline"],
+                )
+            )
+        except Exception as exc:
+            logger.warning("Offline reflection diary write failed: %s", exc)
+        return ReflectionResult(
+            insights=[],
+            summary=summary,
+            triggered_at=time.time(),
         )
 
     def _extract_insights(self, text: str) -> List[str]:

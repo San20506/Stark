@@ -1,5 +1,8 @@
 # Module 1: Core Infrastructure Specification
 
+## Purpose
+Centralize configuration management for the entire STARK system with no hardcoded values elsewhere.
+
 ## Overview
 Centralized configuration management for the entire STARK system. All parameters defined in one place with no hardcoded values elsewhere.
 

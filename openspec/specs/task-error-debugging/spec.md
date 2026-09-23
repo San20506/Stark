@@ -1,5 +1,8 @@
 # Task: Error Debugging Specification
 
+## Purpose
+Analyze error messages, tracebacks, and bugs to provide clear explanations and fixes.
+
 ## Overview
 Analyze error messages, tracebacks, and bugs to provide clear explanations and fixes.
 

@@ -1,5 +1,8 @@
 # Task: Health Monitoring Specification
 
+## Purpose
+Monitor user wellbeing through posture detection, behavior tracking, and proactive health reminders.
+
 ## Overview
 Monitor user wellbeing through camera-based posture detection, behavior tracking, and proactive health reminders.
 

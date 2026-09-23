@@ -5,14 +5,18 @@ from capabilities.error_debugger import (
     ErrorType,
     get_error_debugger,
 )
-from capabilities.health_monitor import (
-    HealthMonitor,
-    HealthAlert,
-    HealthStats,
-    PostureStatus,
-    AlertType,
-    get_health_monitor,
-)
+try:
+    from capabilities.health_monitor import (
+        HealthMonitor,
+        HealthAlert,
+        HealthStats,
+        PostureStatus,
+        AlertType,
+        get_health_monitor,
+    )
+    _HEALTH_AVAILABLE = True
+except ImportError:
+    _HEALTH_AVAILABLE = False
 from capabilities.code_explanation import (
     CodeExplainer,
     CodeAnalysis,
@@ -26,13 +30,19 @@ __all__ = [
     "ErrorAnalysis",
     "ErrorType",
     "get_error_debugger",
-    # Health Monitoring
-    "HealthMonitor",
-    "HealthAlert",
-    "HealthStats",
-    "PostureStatus",
-    "AlertType",
-    "get_health_monitor",
+    # Health Monitoring (quarantined — present only if importable)
+    *(
+        [
+            "HealthMonitor",
+            "HealthAlert",
+            "HealthStats",
+            "PostureStatus",
+            "AlertType",
+            "get_health_monitor",
+        ]
+        if _HEALTH_AVAILABLE
+        else []
+    ),
     # Code Explanation
     "CodeExplainer",
     "CodeAnalysis",

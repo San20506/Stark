@@ -56,10 +56,20 @@ class RetrieverAgent(BaseAgent):
         steps = []
         
         try:
-            # Lazy load RAG
+            # S4 quarantined: rag/ moved to archive/quarantined/rag/.
+            # Guarded fallback — retriever unavailable, degrade to empty results.
             if self._retriever is None:
-                from rag.retriever import get_retriever
-                self._retriever = get_retriever()
+                try:
+                    from rag.retriever import get_retriever
+                    self._retriever = get_retriever()
+                except (ImportError, ModuleNotFoundError) as e:
+                    logger.warning(f"RAG retriever quarantined, returning empty results: {e}")
+                    self._retriever = None
+                    return AgentResult(
+                        success=True,
+                        output="[]",
+                        steps_taken=steps,
+                    )
             
             steps.append("Searching documents")
             

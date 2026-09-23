@@ -1,5 +1,8 @@
 # Module 2: Base Model Specification
 
+## Purpose
+Load and initialize the STARK base model with INT8 quantization for low-latency inference on consumer hardware.
+
 ## Overview
 Load and initialize the STARK base model with INT8 quantization for <50ms inference latency and <1GB VRAM usage.
 

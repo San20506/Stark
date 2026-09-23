@@ -1,5 +1,8 @@
 # Task: Research Specification
 
+## Purpose
+Find, synthesize, and summarize information on topics from various sources.
+
 ## Overview
 Find, synthesize, and summarize information on topics from various sources.
 

@@ -233,13 +233,13 @@ episode_score = 0.70 × cosine_sim(query_embed, episode_embed)
 **What:** `memory/knowledge_graph.py`
 
 **What it does:**
-- NetworkX directed graph where each node is a `KnowledgeNode`: `{id, content, embedding, tags, keywords, links, created_at, version_history}`
+- Hand-rolled in-memory graph where each node is a `ConceptNode`: `{id, content, embedding, node_type, created_at, access_count, promotion_count, metadata}` with dict + adjacency + reverse-adjacency maps (NumPy cosine similarity, `RLock` guarded) — no NetworkX
 - `add_node(content, tags, keywords)` → creates node, auto-generates links to existing nodes above `AMEM_LINK_SIMILARITY_THRESH`
 - `update_node(node_id, new_content)` → appends version entry, updates embedding and links, preserves history
 - `flag_conflict(node_id_a, node_id_b, reason)` → writes to conflict log, emits notification, does NOT auto-resolve
 - `query(text, top_k)` → returns top-K nodes by embedding similarity
 - `traverse(seed_node_id, depth=2)` → BFS from seed node, returns neighbourhood
-- Persisted to `.stark/knowledge_graph/graph.pkl` (NetworkX pickle) + `.stark/knowledge_graph/embeddings.npy` (NumPy array for fast similarity)
+- In-memory only (no `graph.pkl` NetworkX pickle); similarity via NumPy matmul-style cosine at insert/query time
 - Rebuild index on load if embeddings file is newer than graph pickle
 
 **Link generation:**

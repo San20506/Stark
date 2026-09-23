@@ -1,5 +1,8 @@
 # Module 6: Task Detection Specification
 
+## Purpose
+Classify incoming queries into task categories for adapter routing and capability selection.
+
 ## Overview
 Classify incoming queries into task categories for appropriate adapter routing and capability module selection.
 

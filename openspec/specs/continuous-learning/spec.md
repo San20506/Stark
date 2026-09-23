@@ -1,5 +1,8 @@
 # Module 5: Continuous Learning Specification
 
+## Purpose
+Continuously improve the model from experiences in a background thread without catastrophic forgetting.
+
 ## Overview
 Background thread that continuously improves the model from experiences without catastrophic forgetting.
 

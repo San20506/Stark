@@ -1,5 +1,8 @@
 # Task: Conversation Specification
 
+## Purpose
+Enable natural, contextual conversation for general queries and follow-ups.
+
 ## Overview
 Natural, contextual conversation for general queries and follow-ups.
 

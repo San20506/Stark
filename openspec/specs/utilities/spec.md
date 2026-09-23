@@ -1,5 +1,8 @@
 # Module 9: Utilities Specification
 
+## Purpose
+Provide system management utilities for logging, checkpointing, metrics tracking, and performance profiling.
+
 ## Overview
 System management utilities for logging, checkpointing, metrics tracking, and performance profiling.
 

@@ -18,7 +18,7 @@ tests_passed = []
 tests_failed = []
 
 
-def test_result(name: str, passed: bool, message: str = ""):
+def report_result(name: str, passed: bool, message: str = ""):
     """Record test result."""
     if passed:
         tests_passed.append(name)
@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
         # Test 1.1: Orchestrator initialization
         orchestrator = get_orchestrator()
-        test_result("1.1 Orchestrator initialization", True, f"{orchestrator}")
+        report_result("1.1 Orchestrator initialization", True, f"{orchestrator}")
 
         # Test 1.2: Agent registration
         file_agent = FileAgent(
@@ -59,7 +59,7 @@ if __name__ == "__main__":
             allowed_directories=["/home/sandy/Projects/Projects/Stark"],
         )
         orchestrator.register_agent(file_agent)
-        test_result("1.2 Agent registration", file_agent.name in [a.name for a in orchestrator._agents.values()])
+        report_result("1.2 Agent registration", file_agent.name in [a.name for a in orchestrator._agents.values()])
 
         # Test 1.3: File read operation
         import os
@@ -68,7 +68,7 @@ if __name__ == "__main__":
             "read README.md",
             context={"operation": "read", "path": "/home/sandy/Projects/Projects/Stark/README.md"}
         )
-        test_result("1.3 File read operation", result.success, f"Read {len(result.output)} chars")
+        report_result("1.3 File read operation", result.success, f"Read {len(result.output)} chars")
 
         # Test 1.4: File list operation
         result = orchestrator.call_agent(
@@ -76,14 +76,14 @@ if __name__ == "__main__":
             "list agents",
             context={"operation": "list", "path": "/home/sandy/Projects/Projects/Stark/agents"}
         )
-        test_result("1.4 Directory listing", result.success, f"Found files")
+        report_result("1.4 Directory listing", result.success, f"Found files")
 
         # Test 1.5: Statistics tracking
         stats = orchestrator.get_stats()
-        test_result("1.5 Statistics tracking", stats['total_executions'] >= 2, f"{stats['total_executions']} executions")
+        report_result("1.5 Statistics tracking", stats['total_executions'] >= 2, f"{stats['total_executions']} executions")
 
     except Exception as e:
-        test_result("Multi-Agent Framework", False, f"Error: {e}")
+        report_result("Multi-Agent Framework", False, f"Error: {e}")
 
     print()
 
@@ -103,15 +103,15 @@ if __name__ == "__main__":
 
         # Test 2.1: Safe input detection
         check = safety_filter.check_input("Read the file")
-        test_result("2.1 Safe input detection", check.is_safe and check.risk_level == RiskLevel.SAFE)
+        report_result("2.1 Safe input detection", check.is_safe and check.risk_level == RiskLevel.SAFE)
 
         # Test 2.2: Dangerous pattern blocking
         check = safety_filter.check_input("sudo rm -rf /")
-        test_result("2.2 Dangerous pattern blocking", not check.is_safe and check.risk_level == RiskLevel.CRITICAL)
+        report_result("2.2 Dangerous pattern blocking", not check.is_safe and check.risk_level == RiskLevel.CRITICAL)
 
         # Test 2.3: Sensitive data flagging
         check = safety_filter.check_input("password=secret123")
-        test_result("2.3 Sensitive data flagging", len(check.reasons) > 0)
+        report_result("2.3 Sensitive data flagging", len(check.reasons) > 0)
 
         # Test 2.4: Safe action auto-approval
         request = ActionRequest(
@@ -120,7 +120,7 @@ if __name__ == "__main__":
             parameters={}
         )
         approval = validator.validate_action(request)
-        test_result("2.4 Safe action auto-approval", approval.approved)
+        report_result("2.4 Safe action auto-approval", approval.approved)
 
         # Test 2.5: High-risk action blocking
         request = ActionRequest(
@@ -129,7 +129,7 @@ if __name__ == "__main__":
             parameters={"path": "/etc/passwd"}
         )
         approval = validator.validate_action(request)
-        test_result("2.5 High-risk action flagging", approval.requires_user_approval)
+        report_result("2.5 High-risk action flagging", approval.requires_user_approval)
 
         # Test 2.6: Critical action blocking
         request = ActionRequest(
@@ -138,10 +138,10 @@ if __name__ == "__main__":
             parameters={}
         )
         approval = validator.validate_action(request)
-        test_result("2.6 Critical action blocking", not approval.approved and approval.risk_level == RiskLevel.CRITICAL)
+        report_result("2.6 Critical action blocking", not approval.approved and approval.risk_level == RiskLevel.CRITICAL)
 
     except Exception as e:
-        test_result("Safety & Guardrails", False, f"Error: {e}")
+        report_result("Safety & Guardrails", False, f"Error: {e}")
 
     print()
 
@@ -160,29 +160,29 @@ if __name__ == "__main__":
         kb_mouse = get_keyboard_mouse()
 
         # Test 3.1: Window control initialization
-        test_result("3.1 Window control init", window_control is not None, f"Display: {window_control.display_server}")
+        report_result("3.1 Window control init", window_control is not None, f"Display: {window_control.display_server}")
 
         # Test 3.2: App launcher initialization
-        test_result("3.2 App launcher init", app_launcher is not None)
+        report_result("3.2 App launcher init", app_launcher is not None)
 
         # Test 3.3: Process detection
         processes = app_launcher.find_processes("python")
-        test_result("3.3 Process detection", len(processes) > 0, f"Found {len(processes)} Python processes")
+        report_result("3.3 Process detection", len(processes) > 0, f"Found {len(processes)} Python processes")
 
         # Test 3.4: Running app check
         is_running = app_launcher.is_running("bash")
-        test_result("3.4 Running app check", is_running, "bash is running")
+        report_result("3.4 Running app check", is_running, "bash is running")
 
         # Test 3.5: Keyboard/mouse initialization
-        test_result("3.5 Keyboard/mouse init", kb_mouse is not None)
+        report_result("3.5 Keyboard/mouse init", kb_mouse is not None)
 
         # Test 3.6: Dependencies check
         has_deps = window_control.has_wmctrl or kb_mouse.has_xdotool
-        test_result("3.6 Dependencies available", True,
+        report_result("3.6 Dependencies available", True,
                     f"wmctrl: {window_control.has_wmctrl}, xdotool: {kb_mouse.has_xdotool}")
 
     except Exception as e:
-        test_result("Desktop Automation", False, f"Error: {e}")
+        report_result("Desktop Automation", False, f"Error: {e}")
 
     print()
 
@@ -211,9 +211,9 @@ if __name__ == "__main__":
                 "read file",
                 context={"operation": "read", "path": "/home/sandy/Projects/Projects/Stark/agents/file_agent.py"}
             )
-            test_result("4.1 Agent with safety validation", result.success, "Validated + executed")
+            report_result("4.1 Agent with safety validation", result.success, "Validated + executed")
         else:
-            test_result("4.1 Agent with safety validation", False, "Should have approved safe read")
+            report_result("4.1 Agent with safety validation", False, "Should have approved safe read")
 
         # Test 4.2: Multi-component workflow
         # Safety check -> App detection -> File operation
@@ -226,10 +226,10 @@ if __name__ == "__main__":
         )
 
         workflow_success = check.is_safe and is_running and result.success
-        test_result("4.2 Multi-component workflow", workflow_success, "Safety -> Process -> File ops")
+        report_result("4.2 Multi-component workflow", workflow_success, "Safety -> Process -> File ops")
 
     except Exception as e:
-        test_result("Integration", False, f"Error: {e}")
+        report_result("Integration", False, f"Error: {e}")
 
     print()
 

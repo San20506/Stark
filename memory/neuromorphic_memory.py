@@ -16,13 +16,15 @@ from typing import Dict, List, Optional, Tuple, Any
 from collections import defaultdict
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
+
+try:
+    from sentence_transformers import SentenceTransformer
+except ImportError:  # degrade when encoder package is missing
+    SentenceTransformer = None  # type: ignore[assignment,misc]
 
 from memory.memory_node import MemoryNode
 from memory.episodic_schema import ensure_episodic_schema
 from memory.diary_store import DiaryEntry, DiaryStore
-from memory.activation_scorer import ActivationScorer
-from memory.episode_manager import EpisodeManager
 from core.constants import (
     MEMORY_MAX_NODES,
     MEMORY_RAM_LIMIT_GB,
@@ -73,6 +75,9 @@ class NeuromorphicMemory:
         self.persist_path = persist_path or (PROJECT_ROOT / "data" / "memory.json")
         self.episodic_db_path = ensure_episodic_schema()
         self.diary_store = DiaryStore(db_path=self.episodic_db_path)
+        from memory.activation_scorer import ActivationScorer
+        from memory.episode_manager import EpisodeManager
+
         self.scorer = ActivationScorer()
         self.episode_manager = EpisodeManager()
 
@@ -175,6 +180,8 @@ class NeuromorphicMemory:
         task: Optional[str] = None,
         top_k: int = 5,
     ) -> List[Tuple[MemoryNode, float]]:
+        from memory.activation_scorer import ActivationScorer
+
         if not self.nodes:
             return []
 
@@ -196,7 +203,11 @@ class NeuromorphicMemory:
         if not candidates:
             return []
 
-        ranked = self.scorer.rank_memories(candidates, query_embedding)
+        scorer = getattr(self, "scorer", None)
+        if scorer is None:
+            scorer = ActivationScorer()
+            self.scorer = scorer
+        ranked = scorer.rank_memories(candidates, query_embedding)
 
         results = []
         for nid, score in ranked[:top_k]:
